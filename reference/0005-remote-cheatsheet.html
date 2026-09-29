@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cheat sheet — The remote</title>
+<link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+
+<h1><span class="lesson-no">Reference · Git for Vibe Coding</span>
+The remote</h1>
+<p class="lede">The compressed version of <a href="../lessons/0005-the-remote.html">Lesson 5</a>. One page: the map, the line, the law. Pin it with the <a href="0001-checkpoint-loop-cheatsheet.html">loop</a>, <a href="0002-branch-sandbox-cheatsheet.html">sandbox</a>, <a href="0003-divergence-and-conflicts-cheatsheet.html">divergence</a>, and <a href="0004-history-debugger-cheatsheet.html">debugger</a> sheets.</p>
+
+<h2><span class="no">1</span>The remote, mapped</h2>
+<p><strong>origin is a copy, not a boss.</strong> Your machine runs the live repo; the server holds snapshots you chose to send. Solo, it is a <strong>backup</strong> (broken-laptop insurance) and a <strong>mailbox</strong> (you-on-machine-B). Nothing syncs on its own.</p>
+<table>
+  <tr><th>Command</th><th>Moves</th><th>Touches your tree?</th></tr>
+  <tr><td><code>git fetch</code></td><td>server → bookmarks only</td><td>no</td></tr>
+  <tr><td><code>git pull</code></td><td>server → bookmarks, <em>then merges in</em></td><td>yes — L3's merge</td></tr>
+  <tr><td><code>git push</code></td><td>your commits → server</td><td>no</td></tr>
+  <tr><td><code>git clone</code></td><td>whole repo → new folder, once</td><td>creates the folder</td></tr>
+</table>
+<p class="kicker"><code>push -u origin main</code> (L2) sets the default address — bare <code>push</code>/<code>pull</code> know where to go. <code>pull = fetch + merge</code>: the only scary part is the merge you already know.</p>
+
+<h2><span class="no">2</span>Read the line; behind has two kinds</h2>
+<table>
+  <tr><th><code>git status</code> says…</th><th>Means</th><th>Move</th></tr>
+  <tr><td>“up to date with 'origin/main'”</td><td>copies agree</td><td>nothing</td></tr>
+  <tr><td>“ahead by N”</td><td>you hold N unsent commits</td><td><code>git push</code></td></tr>
+  <tr><td>“behind by N” — no commits of yours since</td><td>strictly behind</td><td><code>git pull</code> → <strong>fast-forward</strong>: pointer slides; no merge, no conflict possible</td></tr>
+  <tr><td>“diverged” — both sides grew</td><td>you <em>and</em> the server committed</td><td><code>git pull</code> → real merge → L3's two exits: finish or abort</td></tr>
+</table>
+<div class="idea"><strong class="label">Two exits, fourth time</strong>
+A pull has no exits of its own — <strong>only the diverged kind has decisions.</strong> Strictly behind is a free lunch; check the line before you pull.</div>
+
+<h2><span class="no">3</span>The law of push</h2>
+<p><strong>A branch may only move forward.</strong> Rewind past a pushed commit and push → <code>! [rejected] (non-fast-forward)</code>: the server protects copies that don't know about your rewind. That rejection is L4's shared-history door, with a mechanism.</p>
+<p><code>--force</code> overrides it — the fire exit: never an agent, never shared history. <code>--force-with-lease</code> is the habit version (refuses if the server moved since your last fetch); legal only on your own private repo (L6).</p>
+
+<h2><span class="no">4</span>Agent at the remote</h2>
+<p>• <strong>Delegate the reading:</strong> <code>fetch</code> · <code>status</code> · <code>log origin/main..main</code> — agent runs freely; moves nothing you can see.<br>
+• <strong>Gate the moving:</strong> a diverged <code>pull</code> opens L3's exits — those are yours.<br>
+• <strong>You ship:</strong> <code>push</code> is the human's trigger, like the commit was in L1.<br>
+• <strong>Never:</strong> any <code>--force</code>. L1 guardrail + L4 “burns every clone”, cited twice.</p>
+
+<div class="foot">
+  <p>Companion to <a href="../lessons/0005-the-remote.html">Lesson 5</a> · Part of the <a href="../MISSION.md">Git for Vibe Coding</a> course. Primary source: <a href="https://git-scm.com/book/en/v2/Distributed-Git-Remote-Repository-Management">Pro Git, “Remote Repository Management”</a>.</p>
+</div>
+
+</body>
+</html>

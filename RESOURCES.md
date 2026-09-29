@@ -20,6 +20,8 @@
   Conflict markers, the add-then-commit sequence, `merge --abort`, and why git auto-merges most hunks but stops on same-line edits. Use for: primary reading for lesson 3 (divergence, pull, conflicts).
 - [Book: Pro Git, "Git Bisect"](https://git-scm.com/book/en/v2/Git-Tools-Bisect)
   Canonical reference for bisect start/bad/good/run/reset, the exit-code contract (0 good · 125 skip · else bad), and why binary search finds the first bad commit in ~log₂(n) steps. Use for: primary reading for lesson 4 (history as debugger).
+- [Book: Pro Git, “Remote Repository Management”](https://git-scm.com/book/en/v2/Distributed-Git-Remote-Repository-Management)
+  Canonical reference for remote add/list/remove, tracking (-u), push/pull, and pull as fetch + merge. Use for: primary reading for lesson 5 (the remote).
 
 ## Wisdom (Communities)
 

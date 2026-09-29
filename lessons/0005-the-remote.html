@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 5 — The remote</title>
+<link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+
+<h1><span class="lesson-no">Lesson 5 · Git for Vibe Coding</span>
+The remote</h1>
+<p class="lede">You watched the remote happen for real: <code>git init</code>, one commit, <code>remote add origin</code>, <code>push -u</code> — and the whole course is now on GitHub. This lesson names what that actually did, and dissolves the word that makes git feel scary: <strong>origin is a copy, not a boss.</strong> By the end, every command you have learned has a home in one picture.</p>
+
+<details class="warmup">
+<summary>Warm-up (30 seconds, from Lesson 4) — a bad commit has already left your machine. Which door, and which command?</summary>
+<p><strong>Cancel</strong> — <code>git revert &lt;sha&gt;</code>: a <em>new</em> commit that undoes it. History intact, every clone consistent. Shared history gets cancelled by new commits, never rewritten. That sentence gets its <em>mechanism</em> in this lesson — and it's the reason for everything origin does.</p>
+</details>
+
+<h2><span class="no">1</span>origin: a copy, not a boss</h2>
+
+<p>Here is the real transcript from when we connected this course to GitHub — your remote now, this lesson's example:</p>
+
+<pre><code>git init -b main
+git remote add origin https://github.com/kecai/learngit.git
+git push -u origin main</code></pre>
+
+<p>What <code>push</code> did: it <strong>copied</strong> your commits to a server. It did not move them, hand them over, or start reporting to anyone. Your repo on this machine is still the <em>live</em> one — the place where files actually get edited. The repo on GitHub is a <strong>snapshot of what you chose to share</strong>, updated only when you say so.</p>
+
+<p>For a solo developer the remote is two things: a <strong>backup</strong> (your work survives a broken laptop — this course now does) and a <strong>mailbox</strong> (a way for you-on-another-machine to get a copy). It is not a third place where “the real code lives.” If that phrase is starting to feel true, stop — un-teaching that feeling is what this lesson exists for.</p>
+
+<div class="idea"><strong class="label">The single-player model</strong>
+You (machine A) ⇄ GitHub ⇄ you (machine B, one day). Every arrow is a <em>copy operation you trigger</em>. Nothing syncs on its own; nothing watches you. <code>push -u</code> (Lesson 2, one line) only set a default address: from now on, bare <code>git push</code> and <code>git pull</code> know which remote and which branch, without a URL.</div>
+
+<h2><span class="no">2</span>Ahead and behind — the one line to read</h2>
+
+<p><code>git status</code> reports your branch against its remote twin in exactly one line. The whole remote dance is reading that line:</p>
+
+<table>
+  <tr><th>The line says…</th><th>It means…</th><th>The move</th></tr>
+  <tr><td>“up to date with 'origin/main'”</td><td>both copies tell the same story</td><td>nothing</td></tr>
+  <tr><td>“ahead by 2 commits”</td><td>you hold 2 commits the server copy lacks — an unsent queue</td><td><code>git push</code></td></tr>
+  <tr><td>“behind by 3 commits”</td><td>the server copy holds 3 commits you lack — an unread queue</td><td><code>git pull</code></td></tr>
+  <tr><td>“diverged” (both)</td><td>both queues exist — <em>both sides grew</em></td><td><code>git pull</code> → Lesson 3</td></tr>
+</table>
+
+<p>The four commands, and what each actually touches:</p>
+
+<table>
+  <tr><th>Command</th><th>Server → you</th><th>You → server</th><th>Touches your working tree?</th></tr>
+  <tr><td><code>git fetch</code></td><td>downloads missing commits</td><td>—</td><td>no — bookmarks only</td></tr>
+  <tr><td><code>git pull</code></td><td>downloads, <em>then merges them in</em></td><td>—</td><td>yes — it runs a merge (L3)</td></tr>
+  <tr><td><code>git push</code></td><td>—</td><td>uploads your commits</td><td>no</td></tr>
+  <tr><td><code>git clone</code></td><td>copies the whole repo, once</td><td>—</td><td>creates a new folder</td></tr>
+</table>
+
+<p class="kicker">The un-teaching: <code>pull</code> is not a mystery verb. It is <code>fetch</code> + <code>merge</code> — the Lesson 3 merge with a download bolted on. Every scary thing a pull can do, you already know how to end.</p>
+
+<h2><span class="no">3</span>Behind has two kinds (two exits, no limbo)</h2>
+
+<p>“Behind” hides a fork in the road. Before you pull, know which kind of behind you're in:</p>
+
+<table>
+  <tr><th>Your branch is…</th><th>Pull does</th><th>Merge commit?</th><th>Can it conflict?</th></tr>
+  <tr><td>strictly behind — you made no commits since the fork</td><td><strong>fast-forward</strong>: the pointer slides forward along existing history</td><td>no</td><td>no — one line of history, nothing to disagree with</td></tr>
+  <tr><td>diverged — you <em>and</em> the server both grew</td><td>a real merge of the two histories</td><td>yes</td><td>yes → Lesson 3's two exits: finish or abort</td></tr>
+</table>
+
+<div class="idea"><strong class="label">The costume change</strong>
+Lesson 2: merge-or-kill. Lesson 3: finish-or-abort. Lesson 5: <strong>a pull has no exits of its own — only the diverged kind has decisions.</strong> Strictly behind is not an operation, it's a free lunch. Check the status line first; the scary kind is the one with your own commits in it.</div>
+
+<h2><span class="no">4</span>What push refuses</h2>
+
+<p>Push has one law: <strong>a branch may only move forward.</strong> It can create a branch, or advance it with new commits — never remove history the server holds. Try it: rewind past a commit that's on origin, then push.</p>
+
+<pre><code>$ git reset --hard HEAD~1    # rewind past a pushed commit
+$ git push
+To https://github.com/kecai/learngit.git
+ ! [rejected]        main -> main (non-fast-forward)</code></pre>
+
+<p>That <code>rejected</code> line is Lesson 4's shared-history door with its <em>mechanism</em>: origin doesn't know about your rewind, and “pushing” would mean erasing a commit someone — you, on machine B — may hold. Git stops and explains instead of burning it.</p>
+
+<p>The override exists — <code>git push --force</code> — and it does exactly what the law forbids. That's the fire exit, now with a why behind it: <strong>never an agent's command, ever</strong> (Lesson 1's guardrail, understood rather than memorized). The habit version, for the one day it becomes legal on your own private repo (Lesson 6): <code>--force-with-lease</code> — it refuses if the server moved since your last fetch.</p>
+
+<h2><span class="no">5</span>The agent at the remote</h2>
+
+<p>The remote is where “shared” begins — even solo. The moment you push, a copy exists that another-you will pull. So the publishing gate from Lessons 1 and 4 applies one rung up: <strong>the agent prepares, you ship.</strong></p>
+
+<table>
+  <tr><th>Command</th><th>The agent may…</th><th>Because</th></tr>
+  <tr><td><code>git fetch</code> · <code>git status</code> · <code>git log origin/main..main</code></td><td>run freely</td><td>downloads and reads; moves nothing you can see</td></tr>
+  <tr><td><code>git pull</code></td><td>run — <em>when the line says behind</em></td><td>but a diverged pull opens Lesson 3's exits — those are yours</td></tr>
+  <tr><td><code>git push</code></td><td>prepare the commits — <strong>you push</strong></td><td>publishing is the human's trigger, like the commit was in Lesson 1</td></tr>
+  <tr><td><code>--force</code> / <code>--force-with-lease</code></td><td>never</td><td>the fire exit: L1 guardrail + L4 “burns every clone”, cited twice</td></tr>
+</table>
+
+<p class="kicker">Delegate the reading, keep the publishing. An agent that <em>reports</em> what the server has (“origin is 3 ahead — here's the diff”) is a good one. An agent that <em>does</em> the push has skipped a rung.</p>
+
+<h2><span class="no">6</span>Check yourself</h2>
+
+<p>Four scenarios from real remotes. Options shuffle each load — click for instant feedback.</p>
+
+<div class="quiz" data-quiz>
+  <p class="quiz-q"><strong>Q1.</strong> <code>git status</code> says: “Your branch is ahead of 'origin/main' by 2 commits.” What does that mean?</p>
+  <div class="quiz-opts">
+    <button class="quiz-opt" data-correct="true" data-expl="Ahead = you have, the server doesn't. Those two commits are waiting for git push. The status line is a two-way ledger: ahead is push's to-do list, behind is pull's.">Two commits live only on your machine</button>
+    <button class="quiz-opt" data-expl="That's behind, not ahead. If the server held commits you lack, the line would read “behind by 2”. Ahead and behind are the same fact read from two seats.">Two commits on the server await review</button>
+    <button class="quiz-opt" data-expl="If the server already had them, the branches would agree and the line would read “up to date”. “Ahead” literally means the server copy lacks them.">Two commits the server has already kept</button>
+    <button class="quiz-opt" data-expl="A rejected push prints an error at push time; it doesn't land as a quiet count. Ahead just means “yours to push” — a queue, not a verdict.">Two broken commits the server rejected</button>
+  </div>
+  <p class="quiz-fb" hidden></p>
+</div>
+
+<div class="quiz" data-quiz>
+  <p class="quiz-q"><strong>Q2.</strong> You ran <code>git pull</code>. Your branch is strictly behind origin — no commits of your own since the fork. What happens?</p>
+  <div class="quiz-opts">
+    <button class="quiz-opt" data-correct="true" data-expl="Kind one of behind. There's one path from your tip to the server's, so git slides the pointer forward along existing history: no merge commit, no decisions, no conflicts possible. Nothing to gate.">fast-forward — no merge, no conflict</button>
+    <button class="quiz-opt" data-expl="Merge commits exist when histories split (kind two). Strictly behind has one line of history — the pointer just moves. (Lesson 3: --no-ff is the tool that forces a merge commit where none is needed.)">a new merge commit appears</button>
+    <button class="quiz-opt" data-expl="Pull never rewrites; it adds. Lesson 1's rule: rewriting is reset / force-push territory, and pull is neither. Your local commits are never touched by a pull.">git rewrites your local commits</button>
+    <button class="quiz-opt" data-expl="Conflicts need two sides editing the same lines — kind two. Strictly behind, the server's history contains yours; there's nothing to disagree with. Lesson 3's exits never even open.">a conflict, and three markers</button>
+  </div>
+  <p class="quiz-fb" hidden></p>
+</div>
+
+<div class="quiz" data-quiz>
+  <p class="quiz-q"><strong>Q3.</strong> You ran <code>git reset --hard</code>, undoing a commit that is already on origin. What does <code>git push</code> do next?</p>
+  <div class="quiz-opts">
+    <button class="quiz-opt" data-correct="true" data-expl="non-fast-forward. Push is forward-only: it copies commits the server lacks; it never removes ones the server holds. Your branch now points before a commit origin has — git stops and explains. That stop is L4's shared-history door, with a mechanism.">It refuses — the branch moved back</button>
+    <button class="quiz-opt" data-expl="Only --force does that — and that's the fire exit: L1's “never let the agent” plus L4's “it burns every clone”. Plain push has no rewriting power, by design.">It uploads and rewrites shared history</button>
+    <button class="quiz-opt" data-expl="Push has no delete. It creates branches and moves them forward; removing a commit from origin is not an operation plain push can perform at all.">It deletes the commit from origin</button>
+    <button class="quiz-opt" data-expl="Nothing is quiet here — a backward push fails loudly, with the reason. The point is to make you notice that a copy exists which doesn't know about your rewind.">It quietly re-syncs origin to you</button>
+  </div>
+  <p class="quiz-fb" hidden></p>
+</div>
+
+<div class="quiz" data-quiz>
+  <p class="quiz-q"><strong>Q4.</strong> You're about to let the agent touch the remote. Which command is safe to let it run unattended?</p>
+  <div class="quiz-opts">
+    <button class="quiz-opt" data-correct="true" data-expl="fetch updates the server's bookmarks inside your repo; it moves no branch and no file you can see. The safe agent job: “fetch, and tell me what the server has that I don't.”">fetch — downloads, changes nothing local</button>
+    <button class="quiz-opt" data-expl="A copy is what push makes — on the server, for every clone to pull. Publishing is the human's trigger (L1: the agent drafts, you commit; same shape, one rung higher).">push — it's just a copy</button>
+    <button class="quiz-opt" data-expl="pull = fetch + merge. The download is harmless; the merge moves your branch — and a diverged pull opens L3's conflict exits, which are yours. Agent fetches; you pull when it's behind.">pull — it's just a download</button>
+    <button class="quiz-opt" data-expl="The fire exit, cited twice: L1's guardrail and L4's “burns every clone”. There is no unattended version of this, solo or team.">force-push — always rewrites shared history</button>
+  </div>
+  <p class="quiz-fb" hidden></p>
+</div>
+
+<p class="kicker">3 or 4 correct and the remote has stopped being scary. Q3 is the one that separates “I can push” from “I know what push <em>refuses</em>” — if that one stung, tell me and we'll drill it.</p>
+
+<h2><span class="no">7</span>Practice — two machines</h2>
+
+<p>Fifteen minutes, on <em>your real repo</em>. Two clones act as two of you:</p>
+
+<pre><code># Machine B — a second clone, in a sibling folder
+cd ~/dev/ai
+git clone https://github.com/kecai/learngit.git learngit-b
+cd learngit-b
+# …one small edit, committed, pushed      (server now 1 ahead of A)
+cd ..
+
+# Machine A (this folder)
+git pull            # ← kind one: fast-forward. No decision was even possible.
+# …one edit of your own, committed        (now: diverged)
+git pull            # ← kind two: a real merge — Lesson 3's two exits, live</code></pre>
+
+<p class="kicker">When you finish, both clones say “up to date” — and the repo on GitHub agrees with both. Three copies, one story. That agreement is the entire game of the remote.</p>
+
+<div class="idea"><strong class="label">Or practice with me</strong>
+Tell me: <em>“run the two-machine drill.”</em> I'll create the second clone, make it ahead, and push — then you run the pulls and I check every command. When the divergence bites, we run Lesson 3's exits on it together.</div>
+
+<div class="primary"><strong class="label">Primary source — read today</strong>
+<strong>Pro Git, “Remote Repository Management”</strong> — <a href="https://git-scm.com/book/en/v2/Distributed-Git-Remote-Repository-Management">git-scm.com/book</a>. Ten minutes. It turns today's four commands into understood machinery: <code>remote add</code>/<code>list</code>/<code>remove</code>, what the <code>-u</code> tracking flag stores, and the one-paragraph definition of pull you'll never un-know (fetch + merge).</div>
+
+<h2><span class="no">8</span>What's next — the whole map</h2>
+
+<p>Lesson 4 promised that by the end of this one, every git operation in your day would have a place. It does. Five lessons, one map:</p>
+
+<table>
+  <tr><th>You notice…</th><th>Its home</th></tr>
+  <tr><td>a dirty tree, or the agent starting mid-mess</td><td>Lesson 1 — commit or restore; clean tree first</td></tr>
+  <tr><td>bad uncommitted work</td><td>Lesson 1 — <code>git restore .</code></td></tr>
+  <tr><td>a bad commit, still local</td><td>Lesson 1/4 — <code>reset --hard</code> (door one)</td></tr>
+  <tr><td>a bad commit, already pushed</td><td>Lesson 4 — <code>git revert</code> (door two)</td></tr>
+  <tr><td>a merged feature you regret</td><td>Lesson 4 — <code>revert -m 1</code></td></tr>
+  <tr><td>agent work you keep or kill</td><td>Lesson 2 — the sandbox: merge-or-kill</td></tr>
+  <tr><td>main moved under you</td><td>Lesson 3 — sync early; finish or abort</td></tr>
+  <tr><td>“it was working 30 commits ago”</td><td>Lesson 4 — the gate, the delta, bisect</td></tr>
+  <tr><td>the server copy disagrees with yours</td><td>Lesson 5 — read the line; fetch, pull, push</td></tr>
+</table>
+
+<p><strong>Lesson 6 — taming agent history.</strong> You've been pushing to a personal repo, so the next arc is solo's: <code>rebase</code>, squashing a dozen agent commits into a few honest ones, and the one place force-push becomes legal — your own private branch, with <code>--force-with-lease</code>. (If you also code with teammates, say so and L6 pivots to team workflow instead.)</p>
+
+<div class="foot">
+  <p>Quick-reference version of everything on this page: <a href="../reference/0005-remote-cheatsheet.html">the remote cheatsheet</a>. · Earlier: <a href="0004-history-is-your-debugger.html">Lesson 4</a> · <a href="0003-when-main-moves.html">Lesson 3</a> · <a href="0002-the-agents-sandbox.html">Lesson 2</a> · <a href="0001-checkpoint-and-rollback.html">Lesson 1</a>. · Part of the <a href="../MISSION.md">Git for Vibe Coding</a> course.</p>
+  <p><strong>Stuck on anything?</strong> Paste your <code>git status</code> — that one line, that's all I need — and I'll read it with you: what it means, and the move.</p>
+</div>
+
+<script src="../assets/quiz.js"></script>
+</body>
+</html>
