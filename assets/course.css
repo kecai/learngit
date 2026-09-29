@@ -1,0 +1,114 @@
+/* course.css — shared stylesheet for the Git-for-Vibe-Coding course */
+:root {
+  --ink: #1c1b17;
+  --paper: #fffef9;
+  --accent: #8a3b12;
+  --accent-soft: #f4e8dc;
+  --green: #1a7f37;
+  --green-bg: #e8f4ec;
+  --red: #c0392b;
+  --red-bg: #fbeeec;
+  --muted: #6f6c62;
+  --code-bg: #f6f3ec;
+  --border: #e2dccd;
+  --box: #f7f4ea;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html { background: var(--paper); }
+body {
+  margin: 0 auto;
+  max-width: 46em;
+  padding: 3rem 1.5rem 6rem;
+  font-family: var(--serif);
+  font-size: 1.05rem;
+  line-height: 1.72;
+  color: var(--ink);
+  background: var(--paper);
+}
+h1, h2, h3 { line-height: 1.25; font-weight: 600; }
+h1 { font-size: 2.1rem; margin: 0 0 .4em; }
+h1 .lesson-no { display: block; font-size: .95rem; letter-spacing: .18em; text-transform: uppercase; color: var(--accent); margin-bottom: .5em; }
+h2 { font-size: 1.45rem; margin: 2.2em 0 .6em; padding-top: .4em; border-top: 1px solid var(--border); }
+h2 .no { color: var(--accent); margin-right: .35em; }
+h3 { font-size: 1.12rem; margin: 1.6em 0 .5em; }
+p { margin: 0 0 1.1em; }
+a { color: var(--accent); }
+a:hover { color: #5e2a0e; }
+.lede { font-size: 1.18rem; color: #3c3a33; }
+.kicker { color: var(--muted); font-style: italic; }
+code, kbd, pre { font-family: var(--mono); }
+code { background: var(--code-bg); border: 1px solid var(--border); border-radius: 4px; padding: .08em .35em; font-size: .88em; }
+pre {
+  background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+  padding: 1em 1.2em; overflow-x: auto; line-height: 1.6; font-size: .88rem; margin: 1.2em 0;
+}
+pre code { background: none; border: none; padding: 0; }
+blockquote { margin: 1.4em 0; padding: .6em 1.2em; border-left: 3px solid var(--accent); background: var(--box); color: #45423a; }
+blockquote cite { display: block; margin-top: .5em; color: var(--muted); font-size: .92em; }
+
+/* Key idea / callout boxes */
+.idea, .callout { background: var(--accent-soft); border-left: 4px solid var(--accent); padding: .9em 1.2em; border-radius: 0 8px 8px 0; margin: 1.4em 0; }
+.idea strong.label, .callout strong.label { display: block; text-transform: uppercase; letter-spacing: .12em; font-size: .78rem; color: var(--accent); margin-bottom: .35em; }
+
+/* Diff blocks */
+pre.diff { background: #fbfaf5; }
+.diff .del { background: var(--red-bg); color: var(--red); display: block; }
+.diff .add { background: var(--green-bg); color: var(--green); display: block; }
+.diff .meta { color: var(--muted); }
+
+/* The checkpoint loop */
+.loop { display: grid; gap: .6em; margin: 1.4em 0; }
+.step {
+  display: grid; grid-template-columns: 2.6em 1fr; gap: 1em; align-items: start;
+  border: 1px solid var(--border); background: var(--box); border-radius: 8px; padding: .8em 1em;
+}
+.step .num { font-size: 1.5rem; color: var(--accent); text-align: center; line-height: 1.4; }
+.step h3 { margin: 0 0 .2em; }
+.step p { margin: 0; }
+
+/* Tables */
+table { border-collapse: collapse; width: 100%; margin: 1.3em 0; font-size: .93rem; }
+th, td { text-align: left; padding: .55em .8em; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { text-transform: uppercase; letter-spacing: .08em; font-size: .78rem; color: var(--muted); }
+td code { white-space: nowrap; }
+
+/* Quiz */
+.quiz { border: 1px solid var(--border); border-radius: 10px; padding: 1.1em 1.3em; margin: 1.5em 0; background: #fffdf6; }
+.quiz-q { margin: 0 0 .8em; }
+.quiz-opts { display: grid; gap: .5em; }
+.quiz-opt {
+  font-family: var(--mono); font-size: .92rem; text-align: left; cursor: pointer;
+  padding: .6em .9em; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--box); color: var(--ink); transition: background .15s, border-color .15s;
+}
+.quiz-opt:hover:not(:disabled) { background: #efe9da; }
+.quiz-opt:disabled { cursor: default; opacity: .75; }
+.quiz-opt.opt-correct { background: var(--green-bg); border-color: var(--green); opacity: 1; }
+.quiz-opt.opt-wrong { background: var(--red-bg); border-color: var(--red); opacity: 1; text-decoration: line-through; }
+.quiz-opt.opt-reveal { background: var(--green-bg); border-color: var(--green); opacity: 1; outline: 2px solid var(--green); }
+.quiz-fb { margin: .9em 0 0; font-size: .95rem; color: #3c3a33; }
+.quiz-fb::before { content: "↳ "; color: var(--accent); }
+.score {
+  position: fixed; top: 1em; right: 1em; font-family: var(--mono); font-size: .8rem;
+  background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent);
+  padding: .3em .8em; border-radius: 99px; z-index: 10;
+}
+details.warmup { border: 1px dashed var(--border); border-radius: 8px; padding: .8em 1.1em; margin: 1.4em 0; background: var(--box); }
+details.warmup summary { cursor: pointer; font-weight: 600; }
+details.warmup[open] summary { color: var(--accent); }
+
+/* Primary source card */
+.primary { border: 2px solid var(--accent); border-radius: 10px; padding: 1.1em 1.3em; margin: 1.6em 0; background: #fffdf6; }
+.primary strong.label { display: block; text-transform: uppercase; letter-spacing: .12em; font-size: .78rem; color: var(--accent); margin-bottom: .4em; }
+
+/* Footer */
+.foot { margin-top: 3em; padding-top: 1em; border-top: 1px solid var(--border); color: var(--muted); font-size: .92rem; }
+
+@media print {
+  body { max-width: none; padding: 1cm; font-size: 11pt; }
+  .score, .quiz-opt:hover { display: none; }
+  .quiz, .idea, .callout, .primary { break-inside: avoid; }
+  a::after { content: " (" attr(href) ")"; font-size: .8em; color: var(--muted); word-break: break-all; }
+}

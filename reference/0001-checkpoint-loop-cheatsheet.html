@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cheat sheet — The checkpoint loop</title>
+<link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+
+<h1><span class="lesson-no">Reference · Git for Vibe Coding</span>
+The checkpoint loop</h1>
+<p class="lede">The compressed version of <a href="../lessons/0001-checkpoint-and-rollback.html">Lesson 1</a>. Pin it. Print it. It’s the whole safety model of vibe coding on one page.</p>
+
+<h2><span class="no">1</span>The loop (30 seconds, repeated)</h2>
+<div class="loop">
+  <div class="step"><div class="num">1</div><div><h3>Start clean</h3><p><code>git status</code> → commit anything in flight. <strong>Never let the agent start from a dirty tree.</strong></p></div></div>
+  <div class="step"><div class="num">2</div><div><h3>Agent works</h3><p>Prompt. Walk away. It edits whatever it likes.</p></div></div>
+  <div class="step"><div class="num">3</div><div><h3>Diff gate</h3><p><code>git diff --stat</code> (map) → <code>git diff &lt;file&gt;</code> (details). <strong>Nothing commits unread.</strong></p></div></div>
+  <div class="step"><div class="num">4</div><div><h3>Keep or roll back</h3><p>Good → <code>git add -A &amp;&amp; git commit -m "…"</code> · Bad → <code>git restore .</code> → tighter prompt → step 1.</p></div></div>
+</div>
+
+<h2><span class="no">2</span>Undo table</h2>
+<table>
+  <tr><th>Situation</th><th>Command</th><th>Touches</th></tr>
+  <tr><td>One file’s uncommitted changes are bad</td><td><code>git restore &lt;file&gt;</code></td><td>that file → back to the index (usually = last commit)</td></tr>
+  <tr><td>All uncommitted changes are bad</td><td><code>git restore .</code></td><td>every modified file. Your 30-second full rollback</td></tr>
+  <tr><td>Staged by accident</td><td><code>git restore --staged &lt;file&gt;</code></td><td>index only; file content untouched</td></tr>
+  <tr><td>Explicit “back to the last commit”</td><td><code>git restore --source=HEAD -- &lt;file&gt;</code></td><td>file ← HEAD, even if the index differs</td></tr>
+  <tr><td>Bad commit, <strong>not pushed</strong></td><td><code>git reset --hard &lt;commit&gt;</code></td><td>tree + index + branch pointer. Local-only. Nuclear</td></tr>
+  <tr><td>Bad commit, <strong>pushed / shared</strong></td><td><code>git revert &lt;commit&gt;</code></td><td>adds an undo-commit; history intact; safe for others</td></tr>
+  <tr><td>Find the checkpoint / compare to it</td><td><code>git log --oneline</code> · <code>git diff HEAD~2</code></td><td>—</td></tr>
+</table>
+<p class="kicker">Old git (&lt; 2.23)? <code>git checkout -- &lt;file&gt;</code> is the pre-<code>restore</code> spelling of row one.</p>
+
+<h2><span class="no">3</span>Diff red flags (stop and read the whole diff)</h2>
+<table>
+  <tr><th>Flag</th><th>Smells like</th></tr>
+  <tr><td>Deletions ≫ additions</td><td>Ripped things out to make its change fit</td></tr>
+  <tr><td>Touched <code>.env</code>, config, lockfiles, deps you didn’t ask about</td><td>Scope creep — or a secret leak</td></tr>
+  <tr><td>Deleted red lines that were guards / error checks</td><td>Removed the guardrail to make a bug vanish</td></tr>
+  <tr><td>One-line ask → 20-file “refactor”</td><td>Trust-but-verify failed; full read or rollback</td></tr>
+</table>
+
+<h2><span class="no">4</span>Guardrails for the agent itself</h2>
+<p>Ask your agent tool to confirm before: committing, force-pushing, <code>reset --hard</code>, deleting branches, or touching shared history. Good tools do this by default — <strong>verify yours does</strong>. AI commits can be great commit <em>messages</em>; the human keeps the trigger. (InventiveHQ’s <a href="https://inventivehq.com/blog/git-workflows-ai-coding-assistants">AI+git guardrails</a>)</p>
+
+<div class="foot">
+  <p>Companion to <a href="../lessons/0001-checkpoint-and-rollback.html">Lesson 1</a> · Part of the <a href="../MISSION.md">Git for Vibe Coding</a> course. Primary source: <a href="https://git-scm.com/book/en/v2/Git-Tools-Undoing-Things">Pro Git 2.5 “Undoing Things”</a>.</p>
+</div>
+
+</body>
+</html>

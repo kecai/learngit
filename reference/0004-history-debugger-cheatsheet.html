@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cheat sheet — History is your debugger</title>
+<link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+
+<h1><span class="lesson-no">Reference · Git for Vibe Coding</span>
+History is your debugger</h1>
+<p class="lede">The compressed version of <a href="../lessons/0004-history-is-your-debugger.html">Lesson 4</a>. One page: the gate, the two doors, the bisect words. Pin it with the <a href="0001-checkpoint-loop-cheatsheet.html">loop</a>, <a href="0002-branch-sandbox-cheatsheet.html">sandbox</a>, and <a href="0003-divergence-and-conflicts-cheatsheet.html">divergence</a> sheets.</p>
+
+<h2><span class="no">1</span>The time-travel gate (3 steps, in order)</h2>
+<div class="loop">
+  <div class="step"><div class="num">1</div><div><h3>Find the last good</h3><p><code>git log --oneline</code> (add <code>--stat</code> for the file map). Locate the checkpoint: <em>“it was working at C.”</em></p></div></div>
+  <div class="step"><div class="num">2</div><div><h3>See the delta</h3><p><code>git diff C..HEAD --stat</code> — thirty commits, one map. Per suspicious file: <code>git diff C..HEAD -- &lt;file&gt;</code>.</p></div></div>
+  <div class="step"><div class="num">3</div><div><h3>Ask the agent, with evidence</h3><p>Hand it the range diff <em>and</em> the failure output. Then gate its answer — as always.</p></div></div>
+</div>
+<p class="kicker">Two dots = “what changed between these two commits.” On a straight line, two-dots and three-dots agree — pick one, stay consistent. Three dots on a <em>branch</em> name (relative-to-where-it-left-main) is the <a href="0002-branch-sandbox-cheatsheet.html">sandbox</a> sheet’s tool.</p>
+
+<h2><span class="no">2</span>The two doors of undo</h2>
+<table>
+  <tr><th>The guilty commit is…</th><th>Door</th><th>Command</th></tr>
+  <tr><td>local-only — never pushed</td><td>rewind</td><td><code>git reset --hard &lt;C&gt;</code></td></tr>
+  <tr><td>pushed / shared</td><td>cancel</td><td><code>git revert &lt;sha&gt;</code></td></tr>
+  <tr><td>a whole merged feature (a <code>--no-ff</code> hump)</td><td>cancel the hump</td><td><code>git revert -m 1 &lt;merge-sha&gt;</code></td></tr>
+</table>
+<div class="idea"><strong class="label">One question, two doors</strong>
+Has the bad commit left your machine? Local → rewind. Shared → cancel by a <em>new</em> commit. <strong>Shared history gets cancelled by new commits, never rewritten.</strong> Force-push is the fire exit, not a door.</div>
+
+<h2><span class="no">3</span>Bisect — the five words</h2>
+<table>
+  <tr><th>Word</th><th>It says</th></tr>
+  <tr><td><code>start</code></td><td>open the search (refuses a dirty tree — Lesson 1’s rule again)</td></tr>
+  <tr><td><code>bad &lt;ref&gt;</code></td><td>this end is broken (no ref = whatever is checked out)</td></tr>
+  <tr><td><code>good &lt;ref&gt;</code></td><td>this end still works — <em>run it to verify</em>; a stale good anchor returns the wrong culprit</td></tr>
+  <tr><td><code>run &lt;test-cmd&gt;</code></td><td>git answers for you: exit <code>0</code> = good, <code>125</code> = “can’t test this, skip it”, anything else = bad</td></tr>
+  <tr><td><code>reset</code></td><td>close the search; back on your branch. The guilty commit is named, not lost.</td></tr>
+</table>
+<p class="kicker">Thirty commits → about <strong>five</strong> test runs, not thirty reads. Manual version: git checks out a midpoint, you run the test, you answer <code>bad</code>/<code>good</code>. Automatic: <code>git bisect run node test.js</code> and watch the count shrink. Bisect is a machine — it finds the first bad commit <em>within your anchors</em>. Anchor hygiene is the skill.</p>
+
+<h2><span class="no">4</span>Agent in the archaeology</h2>
+<p>• <strong>You point, it reads, you judge.</strong> Prompt: “Here is the diff between the last known-good commit and HEAD, and here is the failure output. Which commit most plausibly caused it? Show me that commit’s diff and propose a minimal fix. <em>Don’t change anything yet.</em>”<br>
+• The proposed fix goes through the <strong>normal gate</strong> — Lesson 1’s diff red flags, Lesson 2’s merge-or-kill.<br>
+• <strong>Red flag (Lesson 1, recurring):</strong> the fix deletes the safety check that was <em>raising</em> the error. A deleted guardrail is not a fix — it’s silencing, and only you know the check was load-bearing.<br>
+• The agent can <em>write</em> the <code>bisect run</code> test — but “does it actually fail on the bug and pass on good?” is yours to verify. Full loop: <strong>you find → it reads → you gate → it fixes → you gate again.</strong></p>
+
+<div class="foot">
+  <p>Companion to <a href="../lessons/0004-history-is-your-debugger.html">Lesson 4</a> · Part of the <a href="../MISSION.md">Git for Vibe Coding</a> course. Primary source: <a href="https://git-scm.com/book/en/v2/Git-Tools-Bisect">Pro Git, “Git Bisect”</a>.</p>
+</div>
+
+</body>
+</html>

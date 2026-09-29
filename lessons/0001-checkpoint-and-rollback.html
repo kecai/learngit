@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 1 — Git is your undo button</title>
+<link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+
+<h1><span class="lesson-no">Lesson 1 · Git for Vibe Coding</span>
+Git is your undo button</h1>
+<p class="lede">In vibe coding, the agent writes the code. <em>You</em> control the state — and git is the only thing between “working app” and “agent experiment that broke everything.” This lesson installs one habit: <strong>the checkpoint loop</strong>.</p>
+
+<details class="warmup">
+<summary>Warm-up (30 seconds, from memory) — what does <code>git commit</code> actually save?</summary>
+<p>A snapshot of everything you <strong>staged</strong> with <code>git add</code> — a frozen photo of those files at that moment. Not “the changes,” not the whole project: the staged state, plus a message. (You said you know git basics — this probe checks how solid the foundation is. If that answer felt shaky, ask me to re-drill it before going on.)</p>
+</details>
+
+<h2><span class="no">1</span>Why this lesson</h2>
+
+<blockquote>
+<p>“There's a new kind of coding I call 'vibe coding', where you fully give in to the vibes, embrace exponentials, and forget that the code even exists… I 'Accept All' always, I don't read the diffs anymore.”</p>
+<cite>— Andrej Karpathy, who coined the term, Feb 2025 <a href="https://x.com/karpathy/status/1886192184808149383">(@karpathy)</a></cite>
+</blockquote>
+
+<p>One year later Karpathy revised his own position: agent-driven programming is now a professional default, “except with <strong>more oversight and scrutiny</strong>” — his current favourite name for it is <em>agentic engineering</em> (a <a href="https://x.com/karpathy/status/2019137879310836075">Feb 2026 retrospective</a>). The gap between the two tweets is exactly what this course closes: the difference between <em>giving in to the vibes</em> and <em>engineering with agents</em> is oversight — and <strong>git is the oversight tool</strong>.</p>
+
+<div class="idea"><strong class="label">Key idea</strong>
+You are no longer the typist. You are the <strong>state controller</strong>. The agent moves files around fast and makes mistakes fast. Git is your save system, your undo button, and your audit log. One loop does all three.</div>
+
+<h2><span class="no">2</span>The checkpoint loop</h2>
+
+<div class="loop">
+  <div class="step"><div class="num">1</div><div>
+    <h3>Start clean</h3>
+    <p><code>git status</code> — anything you were working on gets committed first. <strong>Rule: never let the agent start from a dirty tree.</strong> Otherwise, after it finishes, you cannot tell which changes are yours and which are the agent’s.</p>
+  </div></div>
+  <div class="step"><div class="num">2</div><div>
+    <h3>Agent works</h3>
+    <p>Prompt, walk away. The agent edits whatever it likes. This is the fast part — you don’t babysit keystrokes.</p>
+  </div></div>
+  <div class="step"><div class="num">3</div><div>
+    <h3>The diff gate</h3>
+    <p>When it’s done: <code>git diff --stat</code> for the map, then <code>git diff &lt;file&gt;</code> for the suspicious ones. <strong>Nothing gets committed until you’ve read what changed.</strong> This is the “more oversight and scrutiny” step.</p>
+  </div></div>
+  <div class="step"><div class="num">4</div><div>
+    <h3>Keep or roll back</h3>
+    <p>Good → <code>git add -A &amp;&amp; git commit -m "what you actually asked for"</code>. Bad → <code>git restore .</code> (all of it) or per-file. Then back to step 1 with a tighter prompt.</p>
+  </div></div>
+</div>
+
+<p>The whole loop costs you <strong>30 seconds of attention</strong>, repeated. That repetition is the skill. It turns “the agent broke my app” from a disaster into a shrug: <code>git restore .</code> and re-ask.</p>
+
+<h2><span class="no">3</span>Reading a diff (the minimum viable version)</h2>
+
+<p>You don’t need to read every line the agent touched. You’re hunting for <strong>intent drift</strong> — changes that don’t match what you asked for. A diff is red lines (removed) and green lines (added):</p>
+
+<pre class="diff"><code><span class="meta">--- a/app.js   +++ b/app.js</span>
+<span class="del">-  const maxAttempts = 3;</span>
+<span class="del">-  if (attempts &gt; maxAttempts) throw new Error("locked");</span>
+<span class="add">+  const maxAttempts = 999999; // be generous</span>
+<span class="add">+  // TODO: remove rate limiting later?</span></code></pre>
+
+<p><code>git diff --stat</code> gives you the map first — files touched plus lines added/deleted. Four red flags worth stopping for:</p>
+
+<table>
+  <tr><th>Red flag</th><th>What it smells like</th></tr>
+  <tr><td>Deletions far exceed additions</td><td>It ripped something out to make its change fit</td></tr>
+  <tr><td>Files you never mentioned (config, <code>package.json</code>, lockfiles, <code>.env</code>)</td><td>Scope creep — or it’s about to leak your secrets</td></tr>
+  <tr><td>Red lines that were safety checks</td><td>It deleted the guardrails to make a bug disappear</td></tr>
+  <tr><td>“Refactor” across 20 files for a one-line ask</td><td>Trust-but-verify failed; this needs a full read or a rollback</td></tr>
+</table>
+
+<p class="kicker">If a diff passes all four checks and the app works, you’ve reviewed it. That’s the bargain: minutes of scrutiny, not hours of line-reading.</p>
+
+<h2><span class="no">4</span>The undo toolbox</h2>
+
+<p>Five commands cover virtually every “oops” in vibe coding. The column that matters is <strong>what it touches</strong> — that’s what makes one safe and another nuclear.</p>
+
+<table>
+  <tr><th>You…</th><th>Type…</th><th>It touches</th></tr>
+  <tr><td>want to discard one file’s uncommitted changes</td><td><code>git restore &lt;file&gt;</code></td><td>that file only, back to the last snapshot</td></tr>
+  <tr><td>want to discard <em>all</em> uncommitted changes</td><td><code>git restore .</code></td><td>every modified file — your 30-second full rollback</td></tr>
+  <tr><td>staged something by accident</td><td><code>git restore --staged &lt;file&gt;</code></td><td>the index only — file content untouched</td></tr>
+  <tr><td>committed bad work, <strong>not pushed yet</strong></td><td><code>git reset --hard &lt;commit&gt;</code></td><td>working tree + index + branch pointer. <strong>Nuclear — local only.</strong></td></tr>
+  <tr><td>committed bad work, <strong>already pushed / shared</strong></td><td><code>git revert &lt;commit&gt;</code></td><td>adds a <em>new</em> commit that undoes it. History stays intact; safe for anyone with a clone.</td></tr>
+</table>
+
+<div class="callout"><strong class="label">Goldilocks</strong>
+In vibe coding, ~90% of recovery is <code>git restore</code> — because the loop keeps bad work <em>uncommitted</em>. The undo commands that move history (<code>reset</code>, <code>revert</code>) are your backup plan, not your daily driver. Find your checkpoints with <code>git log --oneline</code>; compare against them with <code>git diff HEAD~2</code>.</div>
+
+<h2><span class="no">5</span>Check yourself</h2>
+
+<p>Four scenarios, straight from real vibe-coding sessions. Options shuffle each load — no positional hints. Click an answer for instant feedback.</p>
+
+<div class="quiz" data-quiz>
+  <p class="quiz-q"><strong>Q1.</strong> The agent just rewrote four files and now the app crashes. Nothing is staged or committed. What do you type first to see what it did?</p>
+  <div class="quiz-opts">
+    <button class="quiz-opt" data-correct="true" data-expl="diff shows the actual code changes — red and green lines, per file. That is the thing you review at the diff gate.">git diff</button>
+    <button class="quiz-opt" data-expl="log lists past commits. The agent’s work is uncommitted, so there is nothing new in the log yet.">git log</button>
+    <button class="quiz-opt" data-expl="push ships to the remote. You never publish something that is crashing.">git push</button>
+    <button class="quiz-opt" data-expl="branch lists your branches — useful in lesson 2, but it shows no file changes.">git branch</button>
+  </div>
+  <p class="quiz-fb" hidden></p>
+</div>
+
+<div class="quiz" data-quiz>
+  <p class="quiz-q"><strong>Q2.</strong> The diff shows the agent mangled <code>auth.js</code>. The other three files look fine. Nothing is staged or committed. You want to discard <em>only</em> <code>auth.js</code>. What do you type?</p>
+  <div class="quiz-opts">
+    <button class="quiz-opt" data-correct="true" data-expl="restore is surgical: it puts one file back to its last committed state and touches nothing else. Exactly the blast radius you want.">git restore auth.js</button>
+    <button class="quiz-opt" data-expl="Nuclear: it throws away ALL uncommitted work — including the three good files. Wastes the agent’s fine work to fix one bad file.">git reset --hard</button>
+    <button class="quiz-opt" data-expl="revert undoes a COMMIT by adding a new one. Nothing is committed here, and it can’t target a single file.">git revert auth.js</button>
+    <button class="quiz-opt" data-expl="clean deletes UNTRACKED files (brand-new, never committed). auth.js is tracked — and -fd is precisely the careless command to fear in vibe coding.">git clean -fd</button>
+  </div>
+  <p class="quiz-fb" hidden></p>
+</div>
+
+<div class="quiz" data-quiz>
+  <p class="quiz-q"><strong>Q3.</strong> You asked for one small change. The diff shows 12 lines added, 340 deleted, and it touched <code>.env</code> (your secrets). What do you do?</p>
+  <div class="quiz-opts">
+    <button class="quiz-opt" data-correct="true" data-expl="Massive deletions plus a secrets file = the agent went beyond your instructions (scope creep). Stop. Discard the uncommitted changes with git restore ., then re-ask with tighter scope.">Discard the changes then re-ask the agent</button>
+    <button class="quiz-opt" data-expl="Committing what you don’t understand just makes the mess permanent — now undoing it requires history surgery instead of a one-word restore.">Commit the changes to protect the work</button>
+    <button class="quiz-opt" data-expl="Pushing broadcasts the drift to the remote where it becomes hard to undo and visible to everyone else. The diff gate exists to stop this.">Push the branch to sync the remote</button>
+    <button class="quiz-opt" data-expl="“It runs” is not a review — a 340-line deletion can hide regressions that only surface later. Read the stat, or roll back.">Accept the diff and run the app</button>
+  </div>
+  <p class="quiz-fb" hidden></p>
+</div>
+
+<div class="quiz" data-quiz>
+  <p class="quiz-q"><strong>Q4.</strong> Mid-session, the agent finishes a feature, the app works, and your diff check found nothing suspicious. What do you do next?</p>
+  <div class="quiz-opts">
+    <button class="quiz-opt" data-correct="true" data-expl="Green app + clean diff = green checkpoint. Small meaningful commits while vibing are your save points — the smaller the last-good commit, the shorter every future rollback.">Commit it now as a checkpoint</button>
+    <button class="quiz-opt" data-expl="Every feature you skip past leaves one more unsaved layer. If session minute 40 breaks the app, you must restore an hour of the agent’s good work to get back to a known state.">Keep prompting until everything is finished</button>
+    <button class="quiz-opt" data-expl="Committing only under pressure is how the checkpoint loop dies — and it guarantees the day ends as one giant un-reviewable blob in the working tree.">Wait until you absolutely must commit</button>
+    <button class="quiz-opt" data-expl="Deleting files the agent wrote is not a rollback — git restore gets you the same result, minus the lost work, and keeps the history honest.">Delete the files you don't trust</button>
+  </div>
+  <p class="quiz-fb" hidden></p>
+</div>
+
+<p class="kicker">3 or 4 correct and you’re ready for the practice step. Below that? Ask me to walk through any scenario — that’s what I’m here for.</p>
+
+<h2><span class="no">6</span>Practice — do this now</h2>
+
+<p>Six steps, ~10 minutes, in a throwaway folder. This is the rep that makes the loop a habit:</p>
+
+<pre><code>mkdir vibe-practice &amp;&amp; cd vibe-practice &amp;&amp; git init
+# create app.js — any tiny script that runs, e.g. prints "v1 works"
+git add -A &amp;&amp; git commit -m "working app v1"
+# NOW: ask your agent to make a deliberately bad change to app.js
+git status            # see what it touched
+git diff --stat       # the map
+git diff app.js       # the actual change
+git restore app.js    # roll it back
+# ask the agent for a GOOD change instead → diff →
+git add -A &amp;&amp; git commit -m "add the good change"
+git log --oneline     # ← two clean checkpoints. That's the habit.</code></pre>
+
+<div class="idea"><strong class="label">Or practice with me</strong>
+Tell me in this chat: <em>“make a mess in a scratch folder so I can practice the checkpoint loop.”</em> I’ll deliberately break something in a scratch repo, and you run the six steps yourself while I watch and check your commands. Tightest feedback loop available.</div>
+
+<div class="primary"><strong class="label">Primary source — read or watch</strong>
+<strong>Pro Git, chapter 2.5 “Undoing Things”</strong> — <a href="https://git-scm.com/book/en/v2/Git-Tools-Undoing-Things">git-scm.com/book</a>. Ten minutes of reading that turns the undo table above from memorised rows into understood machinery. Re-read Karpathy’s <a href="https://x.com/karpathy/status/2019137879310836075">agentic-engineering retrospective</a> while you’re at it — it’s short.</div>
+
+<h2><span class="no">7</span>What’s next</h2>
+
+<p><strong>Lesson 2 — The agent’s sandbox.</strong> Today you learned to catch bad work <em>before</em> committing. Next: stop letting it happen on your mainline at all — feature branches as throwaway sandboxes the agent can wreck, plus the merge-or-kill decision. You’ll also learn when the loop <em>doesn’t</em> protect you (when the agent commits on its own).</p>
+
+<div class="foot">
+  <p>Quick-reference version of everything on this page: <a href="../reference/0001-checkpoint-loop-cheatsheet.html">the checkpoint loop cheatsheet</a>. · Part of the <a href="../MISSION.md">Git for Vibe Coding</a> course.</p>
+  <p><strong>Stuck on anything?</strong> I’m your teacher for this course — ask me to explain any command, any line of the diff, or any scenario that feels fuzzy. Follow-up questions are how the learning actually sticks.</p>
+</div>
+
+<script src="../assets/quiz.js"></script>
+</body>
+</html>

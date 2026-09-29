@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cheat sheet — The branch sandbox</title>
+<link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+
+<h1><span class="lesson-no">Reference · Git for Vibe Coding</span>
+The branch sandbox</h1>
+<p class="lede">The compressed version of <a href="../lessons/0002-the-agents-sandbox.html">Lesson 2</a>. One page: the rules, the commands, the gate. Pin it next to the <a href="0001-checkpoint-loop-cheatsheet.html">checkpoint loop</a> sheet.</p>
+
+<h2><span class="no">1</span>The three rules</h2>
+<div class="idea"><strong class="label">Sandbox rules</strong>
+<strong>main = the only work you chose to keep.</strong> The agent never builds on it.<br>
+<strong>A branch = a draft</strong> — a cheap pointer, not a copy of code.<br>
+<strong>Every branch has two exits: merged or deleted.</strong> “Keep it just in case” is branch limbo — the graveyard.
+</div>
+
+<h2><span class="no">2</span>The commands</h2>
+<table>
+  <tr><th>You want to…</th><th>Type…</th></tr>
+  <tr><td>start a draft</td><td><code>git switch -c &lt;name&gt;</code> <span class="kicker">(old spelling: <code>checkout -b</code>)</span></td></tr>
+  <tr><td>go back to the safe line</td><td><code>git switch main</code></td></tr>
+  <tr><td>see everything a branch did</td><td><code>git diff main...&lt;name&gt; --stat</code> <span class="kicker">(three dots = branch vs. where it left main)</span></td></tr>
+  <tr><td>keep the branch</td><td><code>git merge --no-ff &lt;name&gt;</code> then <code>git branch -d &lt;name&gt;</code></td></tr>
+  <tr><td>kill the branch</td><td><code>git switch main &amp;&amp; git branch -D &lt;name&gt;</code></td></tr>
+  <tr><td>back up a long experiment</td><td><code>git push -u origin &lt;name&gt;</code> <span class="kicker">(not a “keep” decision)</span></td></tr>
+</table>
+<p class="kicker"><code>-d</code> lowercase refuses to delete unmerged work. <code>-D</code> uppercase means “I mean it.”</p>
+
+<h2><span class="no">3</span>The merge-or-kill gate</h2>
+<div class="loop">
+  <div class="step"><div class="num">1</div><div><h3>Does it work?</h3><p>Run the app / the tests. Current state, not memory.</p></div></div>
+  <div class="step"><div class="num">2</div><div><h3>Does the diff match the ask?</h3><p><code>git diff main...&lt;name&gt;</code> against your prompt’s words. Red flags apply at branch scale.</p></div></div>
+  <div class="step"><div class="num">3</div><div><h3>Can you explain it in one sentence?</h3><p>If not, you’re not merging it.</p></div></div>
+</div>
+<p><strong>All yes → merge</strong> (<code>--no-ff</code>, then <code>-d</code>). <strong>Any no → kill</strong> (<code>-D</code>, re-ask tighter). “The agent spent 45 minutes on it” is a sunk cost, not a reason. The work is a draft, not an asset. <em>Exception:</em> hand-pick surgery only when the kept part is costly to re-derive.</p>
+
+<h2><span class="no">4</span>Guardrails (set once, forget)</h2>
+<p>• Name the branch in the prompt: “Work on branch <code>x</code>, don’t touch <code>main</code>.” · • Forbid: auto-merge to main, auto-push to main, force-push. · • <strong>Allow</strong> auto-commits on the branch — they’re draft checkpoints. · • The agent commits; <strong>you</strong> merge and delete.</p>
+
+<h2><span class="no">5</span>Quick recovery</h2>
+<table>
+  <tr><th>Situation</th><th>Move</th></tr>
+  <tr><td>Branch is bad, unmerged</td><td><code>git switch main &amp;&amp; git branch -D &lt;name&gt;</code> — ten seconds, main was never touched</td></tr>
+  <tr><td>Merged a branch, then regret it</td><td><code>git revert -m 1 &lt;merge-commit&gt;</code> — the <code>--no-ff</code> hump makes one command undo the whole feature</td></tr>
+  <tr><td>Accidentally on main when the agent starts</td><td>Don’t panic — that’s Lesson 3’s problem (revert / reset). Stop the agent first.</td></tr>
+  <tr><td>Branch list filling up</td><td><code>git branch</code>, then the gate, then delete. Two exits, no limbo.</td></tr>
+</table>
+
+<div class="foot">
+  <p>Companion to <a href="../lessons/0002-the-agents-sandbox.html">Lesson 2</a> · Part of the <a href="../MISSION.md">Git for Vibe Coding</a> course. Primary source: <a href="https://git-scm.com/book/en/v2/Git-Branching-Branches-in-20-Seconds">Pro Git, “Branches in 20 Seconds”</a>.</p>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 2 — The agent's sandbox</title>
+<link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+
+<h1><span class="lesson-no">Lesson 2 · Git for Vibe Coding</span>
+The agent's sandbox</h1>
+<p class="lede">Lesson 1 gave you a way to catch bad work <em>before</em> it commits. But long sessions break that: the agent commits on its own, and <code>main</code> quietly accumulates experiments. This lesson moves the experiments off <code>main</code> — onto branches that can disappear — and replaces “should I keep this?” with a two-way decision: <strong>merge or kill</strong>.</p>
+
+<details class="warmup">
+<summary>Warm-up (30 seconds, from Lesson 1) — name two things <code>git restore .</code> can’t undo.</summary>
+<p>Anything <strong>already committed</strong> — restore only touches your uncommitted files — and anything on a <strong>branch that’s already been deleted</strong>. Both are exactly what a long agent session produces. That gap is the whole problem this lesson closes.</p>
+</details>
+
+<h2><span class="no">1</span>The loop’s blind spot</h2>
+
+<p>Lesson 1’s loop is strong against uncommitted mess: <code>git restore .</code> and it’s gone. Two things in a real afternoon break that assumption:</p>
+
+<p><strong>Time.</strong> Review → commit → prompt → repeat. Three hours in, <code>main</code> holds fourteen agent commits, some of them only glanced at. Now commit 3 was subtly wrong, and “roll back” means rewinding eleven commits — which <code>restore .</code> can’t touch at all.</p>
+
+<p><strong>Auto-commits.</strong> Many agent tools commit for you (auto-checkpoints, “commit and continue”). The moment the agent commits, your 30-second full rollback no longer exists.</p>
+
+<p>The fix is <em>not</em> “never let the agent commit.” It’s giving the work a place that can disappear.</p>
+
+<h2><span class="no">2</span>The sandbox model</h2>
+
+<p>Three rules, and that’s the whole model:</p>
+
+<p><strong>1. <code>main</code> is the only work you chose to keep.</strong> The agent never builds directly on it. <code>main</code> is the safe line — the last thing you’d happily ship.</p>
+
+<p><strong>2. A branch is a draft.</strong> Drafts are cheap: <code>git switch -c</code> moves a pointer and changes nothing in your files (branches are moving pointers, not copies of the code — that’s the primary read at the end of this lesson).</p>
+
+<p><strong>3. Every branch has exactly two exits: merged into <code>main</code>, or deleted.</strong> There is no third state. “I’ll keep it around just in case” is <em>branch limbo</em> — the graveyard where half-dead experiments pile up and start to scare you.</p>
+
+<pre><code>A ── B ── C ─────────────────── M
+          │
+          ├─ wild-idea:  D ─ E ─ F      killed — main never noticed
+          │
+          └─ add-search: G ─ H ─┘       merged, then deleted</code></pre>
+
+<p class="kicker">M is a merge commit — the only place a branch becomes main. Everything else on the right of C is a draft, and every draft gets a decision.</p>
+
+<div class="idea"><strong class="label">Key idea</strong>
+The agent works on the branch. It can wreck, auto-commit, experiment freely — the blast radius is the branch. <code>main</code> can’t be hurt. The checkpoint loop from Lesson 1 still runs, but now it runs <em>inside</em> the sandbox, at the end of the branch: diff it against <code>main</code>, then merge or kill.</div>
+
+<h2><span class="no">3</span>The commands</h2>
+
+<table>
+  <tr><th>You want to…</th><th>Type…</th><th>Note</th></tr>
+  <tr><td>start a new draft</td><td><code>git switch -c &lt;name&gt;</code></td><td>create + switch in one step. (Old spelling: <code>git checkout -b &lt;name&gt;</code>.)</td></tr>
+  <tr><td>go back to the safe line</td><td><code>git switch main</code></td><td>your files snap back to main’s state — the branch’s mess simply isn’t here</td></tr>
+  <tr><td>see everything a branch did</td><td><code>git diff main...&lt;name&gt; --stat</code></td><td>three dots = everything the branch added relative to where it left main. This is your branch-scale diff gate.</td></tr>
+  <tr><td>bring the branch into main</td><td><code>git merge --no-ff &lt;name&gt;</code></td><td><code>--no-ff</code> keeps the branch’s commits as one labelled hump in the log — if you regret it later, you can revert the whole feature in one command.</td></tr>
+  <tr><td>delete a branch you merged</td><td><code>git branch -d &lt;name&gt;</code></td><td>lowercase <code>-d</code> is <em>safe</em>: it refuses to delete anything unmerged. A built-in guard.</td></tr>
+  <tr><td>kill a branch on purpose</td><td><code>git branch -D &lt;name&gt;</code></td><td>uppercase <code>-D</code> = I mean it. This is the kill button.</td></tr>
+  <tr><td>back up a long experiment</td><td><code>git push -u origin &lt;name&gt;</code></td><td>a remote copy, in case your laptop dies mid-idea. It is <em>not</em> a “keep” decision — the remote branch dies when the branch does.</td></tr>
+</table>
+
+<h2><span class="no">4</span>The merge-or-kill gate</h2>
+
+<p>When the agent finishes its branch, you don’t <em>feel</em> a decision, you <em>run</em> one. Three questions:</p>
+
+<div class="loop">
+  <div class="step"><div class="num">1</div><div>
+    <h3>Does it work?</h3>
+    <p>Run the app, run the tests. The branch’s latest state, not a memory of how it looked.</p>
+  </div></div>
+  <div class="step"><div class="num">2</div><div>
+    <h3>Does the diff match the ask?</h3>
+    <p><code>git diff main...&lt;name&gt;</code> against the words of your original prompt. Lesson 1’s red flags apply here, at branch scale.</p>
+  </div></div>
+  <div class="step"><div class="num">3</div><div>
+    <h3>Can you explain it in one sentence?</h3>
+    <p>If you can’t, you don’t understand what you’re about to merge — and merging is how a branch becomes permanent.</p>
+  </div></div>
+</div>
+
+<p><strong>All three yes → merge:</strong> <code>git merge --no-ff &lt;name&gt;</code> on main, then <code>git branch -d &lt;name&gt;</code> (it works because it’s merged).</p>
+<p><strong>Any no → kill:</strong> <code>git switch main &amp;&amp; git branch -D &lt;name&gt;</code>, then re-ask the agent with a tighter prompt. The branch and all its commits disappear together. Ten seconds.</p>
+
+<div class="callout"><strong class="label">The trap this gate is built for</strong>
+“…but the agent spent forty-five minutes on it.” That time is <em>sunk</em> — the only costs that still exist are: <strong>10 minutes</strong> to delete the branch, versus <strong>hours</strong> to debug code you don’t trust. The agent’s effort is not yours to avenge. Its work is a draft, not an asset — and drafts get killed all the time. That’s what drafts are <em>for</em>.</div>
+
+<p class="kicker">One exception: hand-picking some of the files (surgery) is worth it only when the kept part is genuinely costly to re-derive — a long test suite, a data migration. Even then, verify the picked part in isolation. The default is whole-branch: merge or kill, never half-keep.</p>
+
+<h2><span class="no">5</span>Guardrails for the agent</h2>
+
+<p>The sandbox is only as real as the fences around it. Four settings, once per tool, then you never think about them again:</p>
+
+<p>• <strong>Name the branch in the prompt.</strong> “Work on branch <code>add-search</code>. Do not touch <code>main</code>.” Most agents respect an explicit instruction about where they’re standing.</p>
+<p>• <strong>Forbid the scary merges.</strong> In your tool’s settings: no auto-merge into main, no auto-push to main, no force-push. (Same guardrail list as Lesson 1 — now it matters at branch scale.)</p>
+<p>• <strong>Allow auto-commits <em>on the branch</em>.</strong> This is the twist from Lesson 1: agent auto-commits are <em>fine</em> inside the sandbox. They’re draft checkpoints — and they actually make the kill decision easier, because you can inspect the individual commits in the diff.</p>
+<p>• <strong>You own merge and delete.</strong> The agent may commit; only you merge, and only you delete. That split — agent drafts, you decide — is the whole operating model this course is built on.</p>
+
+<h2><span class="no">6</span>Check yourself</h2>
+
+<p>Four scenarios from real sandbox sessions. Options shuffle each load — click for instant feedback.</p>
+
+<div class="quiz" data-quiz>
+  <p class="quiz-q"><strong>Q1.</strong> You’re about to ask the agent to refactor the auth module — a risky change. <code>main</code> is clean. What do you type first?</p>
+  <div class="quiz-opts">
+    <button class="quiz-opt" data-correct="true" data-expl="A branch is a two-second pointer that changes nothing. It gives the risky experiment a home that can disappear, while main stays the known-good state.">git switch -c try-refactor</button>
+    <button class="quiz-opt" data-expl="Pushing uploads main — the safe line. There is nothing new to publish before the experiment even starts; publishing first buys nothing.">git push -u origin main</button>
+    <button class="quiz-opt" data-expl="You are already on a clean main — this does nothing useful, and it is the one command that makes teammates ask “why?”.">git reset --hard main</button>
+    <button class="quiz-opt" data-expl="Amend rewrites the last commit’s message. There is nothing to fix before the experiment starts.">git commit --amend message</button>
+  </div>
+  <p class="quiz-fb" hidden></p>
+</div>
+
+<div class="quiz" data-quiz>
+  <p class="quiz-q"><strong>Q2.</strong> The agent worked for 45 minutes on <code>exp-auth</code>. It left 5 auto-commits, and the app now works worse than <code>main</code>. What do you do?</p>
+  <div class="quiz-opts">
+    <button class="quiz-opt" data-correct="true" data-expl="Gate question 1 failed — it doesn’t work, so kill. Switch to main (you were never touched — the branch never was merged) and git branch -D exp-auth. Ten seconds of deletion beats hours of debugging a draft.">Switch to main and delete the branch</button>
+    <button class="quiz-opt" data-expl="“Mostly works” is a fail on question 1. Merging a half-broken auth module moves the mess onto main, where undoing it costs ten times more.">Merge it anyway since it mostly works</button>
+    <button class="quiz-opt" data-expl="Trap: the branch never contaminated main — nothing was merged, so there is nothing to reset. main is still the known-good state you started from.">Reset main hard to before the merge</button>
+    <button class="quiz-opt" data-expl="Reverting is for work that already lives on main. On a branch you intend to discard, it is five times the work for zero benefit — the branch delete takes the commits with it.">Revert each of the five agent commits</button>
+  </div>
+  <p class="quiz-fb" hidden></p>
+</div>
+
+<div class="quiz" data-quiz>
+  <p class="quiz-q"><strong>Q3.</strong> Your tool auto-committed the agent’s changes without asking. You haven’t reviewed the diff yet. What do you do?</p>
+  <div class="quiz-opts">
+    <button class="quiz-opt" data-correct="true" data-expl="Auto-commits inside the sandbox are exactly what you allowed — they’re draft checkpoints. Read the diff (git diff main...&lt;branch&gt;), run the gate, then merge or kill with full information.">Review it on the branch, then decide</button>
+    <button class="quiz-opt" data-expl="Panic surgery before reading. reset --hard would throw away work that might have been fine — and the branch exists precisely so you never need to panic. Review first.">Panic, then reset hard to erase it</button>
+    <button class="quiz-opt" data-expl="Backing up what you haven’t reviewed is hoarding. If the diff fails the gate, the remote copy becomes a second thing you have to delete. Branch limbo, with extra steps.">Push the branch for a remote backup</button>
+    <button class="quiz-opt" data-expl="Same order-of-operations error: reverting before reading can destroy good work. The gate always comes before any history surgery.">Revert the agent commit on the spot</button>
+  </div>
+  <p class="quiz-fb" hidden></p>
+</div>
+
+<div class="quiz" data-quiz>
+  <p class="quiz-q"><strong>Q4.</strong> The agent is done: the app works, and the diff looks clean — but you notice it also rewrote your database schema to deliver a UI-only change. What do you do?</p>
+  <div class="quiz-opts">
+    <button class="quiz-opt" data-correct="true" data-expl="Gate question 2 failed: the diff does not match the ask — the schema rewrite was never requested. Kill the whole branch, then re-ask with explicit scope (“UI only, do not touch the schema”). Re-deriving the UI is one prompt; an unreviewed schema change is a 2 a.m. incident.">Kill the branch, then re-ask, scoped</button>
+    <button class="quiz-opt" data-expl="“It works” is only question 1 of 3. The unreviewed schema change ships with the merge and haunts you later — exactly what the diff gate exists to stop.">Merge it, the app does work</button>
+    <button class="quiz-opt" data-expl="Seductive, but surgery is the exception, not the default — worth it only when the kept part is costly to re-derive. A UI change is one prompt to re-derive. Kill the branch, re-ask scoped.">Keep the UI, revert the schema</button>
+    <button class="quiz-opt" data-expl="“Later” is where branch limbo lives. Every branch has two exits — push-and-hope is a third, and it’s the one that turns your repo into a graveyard.">Push it and debug it later</button>
+  </div>
+  <p class="quiz-fb" hidden></p>
+</div>
+
+<p class="kicker">3 or 4 correct and the sandbox is installed. Below that? Tell me which scenario stung — the “but it took so long” ones are the honest ones to flag.</p>
+
+<h2><span class="no">7</span>Practice — do this now</h2>
+
+<p>Ten minutes, throwaway folder. This rep is the whole lesson — one wasted draft, one good one:</p>
+
+<pre><code>mkdir vibe-sandbox &amp;&amp; cd vibe-sandbox &amp;&amp; git init
+# a tiny working app
+git add -A &amp;&amp; git commit -m "working app"
+
+# 1 — a wild experiment
+git switch -c wild-idea
+# ask your agent: "rewrite this app however you think is best"
+# (let it auto-commit as much as it likes — it's a draft)
+git diff main...wild-idea --stat   # the map of the damage
+# → fails the gate → kill:
+git switch main &amp;&amp; git branch -D wild-idea    # gone. main never noticed.
+
+# 2 — a scoped ask
+git switch -c add-search
+# ask for ONE small feature: "add search to the list. UI only, touch nothing else."
+git diff main...add-search --stat  # the gate: works? matches? explainable?
+# → passes → keep:
+git merge --no-ff add-search
+git branch -d add-search           # safe -d works because it's merged
+git log --oneline                  # ← the hump: the draft, now part of main</code></pre>
+
+<div class="idea"><strong class="label">Or practice with me</strong>
+Tell me: <em>“make a mess in a scratch repo.”</em> I’ll set up the working app, then have the agent genuinely wreck a <code>wild-idea</code> branch. You run the kill, the scoped re-ask, and the merge — I’ll watch every command and check them against the gate. Tightest feedback loop available.</div>
+
+<div class="primary"><strong class="label">Primary source — read today</strong>
+<strong>Pro Git, “Branches in 20 Seconds”</strong> — <a href="https://git-scm.com/book/en/v2/Git-Branching-Branches-in-20-Seconds">git-scm.com/book</a>. It’s ten minutes of reading, and it lands one idea that makes the rest of git click: <strong>a branch is a moving pointer, not a copy of your code.</strong> That’s why creating one is free, why your files snap between them, and why the sandbox model is possible at all.</div>
+
+<h2><span class="no">8</span>What’s next</h2>
+
+<p><strong>Lesson 3 — When main moves underneath you.</strong> The sandbox assumes main is still where you left it. Reality disagrees: you’re three commits deep in a branch and main has moved (someone pushed, you pulled yesterday, you merged something else). Diverged branches, <code>pull</code>, and conflicts — and how to use your agent as a <em>conflict interpreter</em> rather than a conflict <em>resolver</em>.</p>
+
+<div class="foot">
+  <p>Quick-reference version of everything on this page: <a href="../reference/0002-branch-sandbox-cheatsheet.html">the branch sandbox cheatsheet</a>. · Earlier: <a href="0001-checkpoint-and-rollback.html">Lesson 1 — the checkpoint loop</a>. · Part of the <a href="../MISSION.md">Git for Vibe Coding</a> course.</p>
+  <p><strong>Stuck on anything?</strong> I’m your teacher for this course — ask me to explain any command, any line of the diagram, or any scenario that feels fuzzy. Follow-up questions are how the learning actually sticks.</p>
+</div>
+
+<script src="../assets/quiz.js"></script>
+</body>
+</html>

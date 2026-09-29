@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cheat sheet — Divergence &amp; conflicts</title>
+<link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+
+<h1><span class="lesson-no">Reference · Git for Vibe Coding</span>
+Divergence &amp; conflicts</h1>
+<p class="lede">The compressed version of <a href="../lessons/0003-when-main-moves.html">Lesson 3</a>. One page: the diagram, the loop, the two exits. Pin it with the <a href="0001-checkpoint-loop-cheatsheet.html">loop</a> and <a href="0002-branch-sandbox-cheatsheet.html">sandbox</a> sheets.</p>
+
+<h2><span class="no">1</span>Divergence, drawn</h2>
+<pre><code>A ── B ── C ─────────── E ─ F     ← main moved after the fork
+          │
+          ├─ D ─ G               ← your branch, built on the old C
+
+Both sides ahead of C. Neither wrong. They just don’t know about each other.</code></pre>
+<table>
+  <tr><th>Direction</th><th>Command</th><th>Conflicts hurt…</th></tr>
+  <tr><td>main → branch (sync, do this early)</td><td><code>git merge main</code> (on the branch)</td><td>now — small, localised</td></tr>
+  <tr><td>branch → main (the Lesson 2 merge)</td><td><code>git merge --no-ff &lt;name&gt;</code> (on main)</td><td>late — the big diff</td></tr>
+</table>
+<p class="kicker"><code>git pull</code> on a feature branch pulls its <em>remote</em>, not main. “main moved” = plain <code>git merge main</code>.</p>
+
+<h2><span class="no">2</span>Anatomy of a conflict</h2>
+<pre class="diff"><code>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD      ← top: your side (where the merge started)
+  const label = "Log in";
+=======
+  const label = "Sign in";      ← bottom: incoming (main)
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; main</code></pre>
+<p>Per hunk, exactly three legal moves: <strong>take top</strong> · <strong>take bottom</strong> · <strong>write a fused third line</strong>. The question is intent (“what was each change <em>for</em>?”) — a question only you can answer.</p>
+
+<h2><span class="no">3</span>The conflict loop (two exits, no limbo)</h2>
+<div class="loop">
+  <div class="step"><div class="num">1</div><div><h3>Map</h3><p><code>git status</code> — “both modified” files are your to-do list.</p></div></div>
+  <div class="step"><div class="num">2</div><div><h3>Read</h3><p>Each hunk, or the agent’s plain-English translation of it.</p></div></div>
+  <div class="step"><div class="num">3</div><div><h3>Decide</h3><p>Top / bottom / fused — your call, per hunk.</p></div></div>
+  <div class="step"><div class="num">4</div><div><h3>Mark resolved</h3><p><code>git add &lt;file&gt;</code> per file. “Resolved” literally means “staged”.</p></div></div>
+  <div class="step"><div class="num">5</div><div><h3>Finish</h3><p><code>git commit</code> (or <code>git merge --continue</code>) — the merge commit records it.</p></div></div>
+</div>
+<div class="idea"><strong class="label">The two exits</strong>
+<strong>Finish</strong> = add every conflicted file + commit. <strong>Abort</strong> = <code>git merge --abort</code> → exactly the pre-merge state, nothing lost. Never leave a merge hanging overnight — pick an exit, even “not today.”</div>
+
+<h2><span class="no">4</span>Agent guardrails (strongest here)</h2>
+<p>• <strong>Agent interprets, you judge.</strong> Prompt: “Don’t resolve yet — for each hunk: what does the top do, what does the bottom do, do they conflict in purpose or just text?”<br>
+• <strong>Red flag:</strong> agent “resolves” by taking one side wholesale without you reading → it guessed intent. Re-run with the prompt above.<br>
+• Conflicts are the one place to deliberately <em>slow down</em> an agent session.</p>
+
+<div class="foot">
+  <p>Companion to <a href="../lessons/0003-when-main-moves.html">Lesson 3</a> · Part of the <a href="../MISSION.md">Git for Vibe Coding</a> course. Primary source: <a href="https://git-scm.com/book/en/v2/Git-Branching-Merging">Pro Git, “Merging”</a>.</p>
+</div>
+
+</body>
+</html>

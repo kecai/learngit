@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 4 — History is your debugger</title>
+<link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+
+<h1><span class="lesson-no">Lesson 4 · Git for Vibe Coding</span>
+History is your debugger</h1>
+<p class="lede">The agent writes fast. A long session leaves “it was working yesterday” <strong>30 commits in the past</strong> — and the tree is still moving while you debug. This lesson turns history into a machine you point at: find the last known-good commit, diff the range, and let <code>git bisect</code> name the guilty one in about five answers. The skill is not the commands — it’s knowing <em>what to point them at</em>.</p>
+
+<details class="warmup">
+<summary>Warm-up (30 seconds, from Lesson 3) — a merge has two exits. Name them, with the command for each.</summary>
+<p><strong>Finished</strong> — <code>git add</code> every conflicted file, then <code>git commit</code> (or <code>git merge --continue</code>). <strong>Aborted</strong> — <code>git merge --abort</code>, back to exactly the pre-merge state. That rule — every operation ends, nothing lingers — comes back in this lesson wearing a different costume.</p>
+</details>
+
+<h2><span class="no">1</span>It was working yesterday. That’s 30 commits ago.</h2>
+
+<p>Lesson 1’s loop covered ~90% of recovery, because it kept bad work <em>uncommitted</em>: <code>git restore .</code> and it was gone. Long sessions break that — auto-commits, an agent that commits on its own, a feature that took three prompts. By afternoon, <code>main</code> holds thirty agent commits, some of them only glanced at. And the app breaks.</p>
+
+<p>The pre-agent debugging habit fails here for a specific reason. The habit is: <em>open the file, read the current code, reason about why it fails.</em> But the current code is a <strong>blend of thirty unreviewed decisions</strong> — and you cannot tell which line is yours, which is the agent’s, or which one caused the crash. You are debugging fog.</p>
+
+<div class="idea"><strong class="label">The reframe</strong>
+Stop debugging the <em>present</em> and start interrogating the <em>history</em>. Git keeps a frozen snapshot of every state the repo has ever been in. Your working tree is where you live; history is where the evidence is. The commands in this lesson are few and stable — the skill is knowing <strong>what to point them at</strong>: a good commit, a range, a failing test.</div>
+
+<h2><span class="no">2</span>The time-travel gate</h2>
+
+<p>When the app breaks, don’t start with a command — start with <strong>one question: what was the last commit you know was good?</strong> You know, because Lesson 1’s habit made your checkpoints <em>tested</em> states, not just saved ones. Then run three steps:</p>
+
+<div class="loop">
+  <div class="step"><div class="num">1</div><div>
+    <h3>Find the last good</h3>
+    <p><code>git log --oneline</code> — one line per commit, newest first. Add <code>--stat</code> for the map: which files each commit touched. Locate your checkpoint: <em>“it was working at C.”</em></p>
+  </div></div>
+  <div class="step"><div class="num">2</div><div>
+    <h3>See the delta</h3>
+    <p><code>git diff &lt;C&gt;..HEAD --stat</code> — thirty commits collapse into <strong>one map</strong> of everything that changed since the last good. Then, per suspicious file: <code>git diff &lt;C&gt;..HEAD -- &lt;file&gt;</code>. Thirty mysteries become one readable diff.</p>
+  </div></div>
+  <div class="step"><div class="num">3</div><div>
+    <h3>Ask the agent, with evidence</h3>
+    <p>Now — and only now — hand the agent the delta and the failure output. It reasons from evidence instead of vibes. (Section 5 has the exact prompt.)</p>
+  </div></div>
+</div>
+
+<p class="kicker">Two dots: “what changed between these two commits.” When the two commits sit on one straight line, the two-dot and three-dot forms agree — pick one and stay consistent. (Three dots on a <em>branch</em> name meant “relative to where it left main” — that’s Lesson 2’s tool.)</p>
+
+<div class="idea"><strong class="label">The gate in one line</strong>
+Find the last good → diff the range → then talk to the agent. <strong>The order is the lesson.</strong> Reverse it — agent first, evidence later — and you get vibes with extra steps.</div>
+
+<h2><span class="no">3</span>The two doors of undo</h2>
+
+<p>Suppose the delta points the finger — or bisect, next section, does. You now have a guilty commit. Lesson 1’s undo table still applies, but the choice of door now depends on one question the table didn’t need: <strong>has the bad commit left your machine?</strong></p>
+
+<table>
+  <tr><th>The guilty commit is…</th><th>Door</th><th>Command</th><th>What it does</th></tr>
+  <tr><td>local-only — never pushed</td><td>rewind</td><td><code>git reset --hard &lt;C&gt;</code></td><td>Moves the branch pointer back; the bad commits vanish from this branch. Only safe while nobody else has a copy. (Lesson 1’s nuclear option — now aimed at a specific commit.)</td></tr>
+  <tr><td>pushed / shared</td><td>cancel</td><td><code>git revert &lt;sha&gt;</code></td><td>Adds a <em>new</em> commit that undoes the bad one. History intact; every clone stays consistent.</td></tr>
+  <tr><td>a whole merged feature (a <code>--no-ff</code> hump)</td><td>cancel the hump</td><td><code>git revert -m 1 &lt;merge-sha&gt;</code></td><td>One new commit that undoes the entire feature — paying off the promise Lesson 2 made when it told you to merge with <code>--no-ff</code>.</td></tr>
+</table>
+
+<div class="idea"><strong class="label">Two exits, third time</strong>
+A bad commit has exactly two doors, and the choice is one question: <strong>has it left your machine?</strong> Local → rewind. Shared → cancel. “Force-push the rewind” is not a third door — it’s the fire exit, and it burns every clone: your next <code>pull</code>, and every teammate’s. The rule: <strong>shared history gets cancelled by new commits, never rewritten.</strong> And remember the sandbox: most agent mistakes never reach these doors at all — they die on the branch (Lesson 2’s kill). These doors are for work that <em>survived</em> the gate.</div>
+
+<h2><span class="no">4</span>Bisect — binary search, you as the sensor</h2>
+
+<p>Sometimes you have no good anchor — the checkpoint habit failed, or the bug predates your last one — and the delta is unreadable: thirty commits, twenty files. What you <em>do</em> have is exactly what <code>git bisect</code> eats: <strong>a state that works, a state that doesn’t, and a test that tells them apart.</strong></p>
+
+<pre><code>git bisect start
+git bisect bad HEAD           # “now” is broken
+git bisect good &lt;last-good&gt;   # “this commit” still worked
+
+# git checks out a MIDDLE commit — the files on disk are now that past state
+# (detached HEAD: you are visiting history, not living in it)
+$ node app.js                 # run the test yourself…
+git bisect bad                # …and answer. Or good. Repeat.
+
+# …until git names the culprit…
+git bisect reset              # back where you were; the guilty commit is named, not lost</code></pre>
+
+<p>Every answer halves the suspect range. <strong>Thirty commits → about five test runs, not thirty reads.</strong> When one commit remains, git says <em>“commit <code>abc12…</code> is the first bad commit”</em> and shows it — the message, the diff — everything you need to hand to the agent.</p>
+
+<table>
+  <tr><th>Word</th><th>It says</th></tr>
+  <tr><td><code>start</code></td><td>open the search — refuses if the tree is dirty (Lesson 1’s clean-tree rule, again)</td></tr>
+  <tr><td><code>bad &lt;ref&gt;</code></td><td>this end is broken (no ref = the commit currently checked out)</td></tr>
+  <tr><td><code>good &lt;ref&gt;</code></td><td>this end still works</td></tr>
+  <tr><td><code>run &lt;test-cmd&gt;</code></td><td>answer for me: exit 0 = good, 125 = “can’t test this commit, skip it”, anything else = bad</td></tr>
+  <tr><td><code>reset</code></td><td>close the search, return to your branch</td></tr>
+</table>
+
+<p class="kicker">The fully automatic version: <code>git bisect run node test.js</code> — git runs the test itself at every midpoint and you watch the count shrink. One honesty note: bisect is a machine. It finds the first bad commit <em>within the anchors you give it</em> — a stale “good” anchor (one that was actually already broken) leads to the wrong culprit. That’s why step 1 of the gate says <em>run</em> the good commit, not assume it.</p>
+
+<h2><span class="no">5</span>The agent in archaeology</h2>
+
+<p>Your agent is an excellent <strong>diff reader and fix-proposer</strong>. Given the range diff and the failure output, it will usually identify the guilty commit faster than you can — and often propose a good fix. The working division of labour is the same shape as Lesson 3’s: <strong>you point, it reads, you judge.</strong></p>
+
+<div class="callout"><strong class="label">The prompt that works</strong>
+<em>“Here is the diff between the last known-good commit and HEAD, and here is the failure output. Which commit most plausibly caused it? Show me that commit’s diff and propose a minimal fix. Don’t change anything yet.”</em><br><br>
+Then the proposed fix goes through the <strong>normal gate</strong> — Lesson 1’s diff red flags, Lesson 2’s merge-or-kill. A fix that “makes the symptom go away” is still a diff that has to be read.</div>
+
+<p><strong>Red flag (Lesson 1, recurring):</strong> the fix’s diff deletes the safety check that was <em>raising</em> the error. The crash disappears; a silent rot is born. If the proposed fix touches a guardrail line — stop. That’s not a fix, that’s silencing, and only you can know the check was load-bearing (Lesson 3: intent).</p>
+
+<p class="kicker">And let the agent <em>write</em> the <code>bisect run</code> test command — but “does this command actually fail on the bug and pass on good?” is yours to verify. The archaeology loop, complete: <strong>you find → it reads → you gate → it fixes → you gate again.</strong> The agent adds speed to every step except the one that requires intent.</p>
+
+<h2><span class="no">6</span>Check yourself</h2>
+
+<p>Four scenarios from real broken sessions. Options shuffle each load — click for instant feedback.</p>
+
+<div class="quiz" data-quiz>
+  <p class="quiz-q"><strong>Q1.</strong> The app worked yesterday. Today it is broken, and thirty agent commits sit between. What do you do first?</p>
+  <div class="quiz-opts">
+    <button class="quiz-opt" data-correct="true" data-expl="Step one of the time-travel gate. A known-good commit turns “it broke somewhere” into “it broke between here and now” — a range you can inspect. Everything else in this lesson assumes you can answer this question.">Find the last commit that still worked</button>
+    <button class="quiz-opt" data-expl="That’s thirty reads to catch one guilty commit. Step two shows you the same evidence in ONE diff of the range; bisect finds the culprit in about five checks. Full reads are the fallback when you have no good anchor at all.">Read all thirty diffs, oldest to newest</button>
+    <button class="quiz-opt" data-expl="Nuclear, and blind: it incinerates the twenty-nine good commits in the range along with the bad one — and it rewrites history. Reset hard is local-only and aimed at a specific commit, never at a guess.">Reset hard back to the first commit</button>
+    <button class="quiz-opt" data-expl="An agent with no evidence is guessing at thirty suspects. Hand it the range diff and the failure first (gate step three) and the same agent is far harder to fool.">Ask the agent to just fix it</button>
+  </div>
+  <p class="quiz-fb" hidden></p>
+</div>
+
+<div class="quiz" data-quiz>
+  <p class="quiz-q"><strong>Q2.</strong> You found the guilty commit. It is already pushed to origin — other clones have it too. How do you undo it?</p>
+  <div class="quiz-opts">
+    <button class="quiz-opt" data-correct="true" data-expl="The shared door. git revert &lt;sha&gt; adds a new commit that undoes the bad one: history intact, every clone consistent. The app behaves as if the commit never happened — without ever lying about it.">Revert it with a new commit</button>
+    <button class="quiz-opt" data-expl="The local-only door, aimed at shared history. It rewrites a commit that other clones have — your next pull, and every teammate’s, breaks. The one move in git that turns a bug into an incident.">Reset hard back to before it</button>
+    <button class="quiz-opt" data-expl="Deleting a branch removes a pointer, not a commit. The commit — and the bug — live on origin and on main, and reappear the next time anyone checks them out. Hiding is not undoing.">Delete the branch to hide it</button>
+    <button class="quiz-opt" data-expl="clean deletes UNTRACKED files; it cannot touch committed history at all. A re-push of the same bad state just re-announces the bug to everyone. (Lesson 1: -fd is the careless command to fear.)">Run a tree clean and re-push</button>
+  </div>
+  <p class="quiz-fb" hidden></p>
+</div>
+
+<div class="quiz" data-quiz>
+  <p class="quiz-q"><strong>Q3.</strong> You have a last-known-good commit, a broken HEAD, and a failing test command that exits non-zero on the bug. Thirty commits in between. What now?</p>
+  <div class="quiz-opts">
+    <button class="quiz-opt" data-correct="true" data-expl="That is the exact shape bisect eats: a good end, a bad end, a test that tells them apart. With a real test command, git bisect run answers for you — thirty commits take about five checks, and git names the first bad one.">Bisect the range, running the failing test</button>
+    <button class="quiz-opt" data-expl="Mechanically correct and thirty times too slow: you’d read nearly all of them to rule most of them out by hand. Bisect does exactly that ruling-out for you, mechanically, in about five steps.">Read every diff from start to finish</button>
+    <button class="quiz-opt" data-expl="The agent is a great reader of evidence you hand it — but a guess with no range is just vibes with better typography. Bisect first, then let it explain the named commit; or give it the range diff.">Have the agent just guess the commit</button>
+    <button class="quiz-opt" data-expl="Reverting thirty commits cancels twenty-nine good ones along with the bad — and since revert is the shared-history door, taking back the reverts takes more reverts. The undo must be aimed at the one guilty commit.">Revert all thirty to start the day</button>
+  </div>
+  <p class="quiz-fb" hidden></p>
+</div>
+
+<div class="quiz" data-quiz>
+  <p class="quiz-q"><strong>Q4.</strong> The agent proposes a three-line “fix” that makes the crash disappear. You read the diff: one deleted line was a safety check. What do you do?</p>
+  <div class="quiz-opts">
+    <button class="quiz-opt" data-correct="true" data-expl="Lesson 2’s gate, applied to the agent’s own output: can you explain the actual cause in one sentence? A fix that deletes a guardrail to silence a symptom fails that test — and the two exits apply to the agent’s drafts too: merge or kill.">Gate it first, then merge or kill</button>
+    <button class="quiz-opt" data-expl="“It runs” is the bargain-breaker from Lesson 1. The crash was a symptom; the deleted check is what caught the real cause. You have traded a loud failure for a silent one — and the silent one ships.">Merge it now, the crash is gone</button>
+    <button class="quiz-opt" data-expl="“Later” is where the deleted guardrail lands in production. The check existed for a reason only you can know (Lesson 3: intent) — root-cause first, push after.">Push it now and root-cause it later</button>
+    <button class="quiz-opt" data-expl="Typing the same three lines does not change what they do. If the diff deletes a guardrail, your version deletes it too. The problem is the fix, not the hands that write it.">Rewrite the same fix yourself by hand</button>
+  </div>
+  <p class="quiz-fb" hidden></p>
+</div>
+
+<p class="kicker">3 or 4 correct and the time-travel gate is installed. Q2 is the one that separates “I know undo” from “I know <em>shared</em> undo” — if that one stung, tell me and we’ll drill it.</p>
+
+<h2><span class="no">7</span>Practice — do this now</h2>
+
+<p>Fifteen minutes, no agent needed — you manufacture the regression by hand, because the rep is the point:</p>
+
+<pre><code>mkdir vibe-bisect &amp;&amp; cd vibe-bisect &amp;&amp; git init
+# app.js — a tiny script whose “test” is: does it print "v1 works"?
+# (e.g. node app.js — any runnable thing with an obvious good/bad output)
+
+git add -A &amp;&amp; git commit -m "working app v1"      # ← last known good
+
+# v2 — an innocent change (a log line, a comment, a tiny feature)
+git add -A &amp;&amp; git commit -m "v2: add a log line"
+
+# v3 — the bug: remove the guard line, so the app now crashes
+git add -A &amp;&amp; git commit -m "v3: tidy up app.js"
+
+git log --oneline                  # v3 ← HEAD (broken) … v2 … v1 (good)
+git diff &lt;v1&gt;..HEAD --stat         # gate step two: the whole range, one map
+
+git bisect start
+git bisect bad HEAD
+git bisect good &lt;v1&gt;
+# git checks out a midpoint — run: node app.js
+git bisect bad                    # …answer until git names v3
+git bisect reset                  # back on your branch; v3 is named, not lost
+
+git revert &lt;v3&gt;                   # the shared-safe door: a NEW commit on top
+git log --oneline                 # ← the undo commit, history intact, app well</code></pre>
+
+<p class="kicker">With three commits, bisect is almost trivial — the drill is the <em>ritual</em>: the gate, the anchors, the answers, the reset, the door. In a real thirty-commit session that same ritual is the difference between five test runs and an afternoon.</p>
+
+<div class="idea"><strong class="label">Or practice with me</strong>
+Tell me: <em>“make a mess across commits.”</em> I’ll plant a real bug across a dozen or so commits in a scratch repo — a few of them plausible refactors, so the range diff is genuinely ambiguous. You run the gate and the bisect; I check every command. The agent-era variant of every practice so far.</div>
+
+<div class="primary"><strong class="label">Primary source — read today</strong>
+<strong>Pro Git, “Git Bisect”</strong> — <a href="https://git-scm.com/book/en/v2/Git-Tools-Bisect">git-scm.com/book</a>. Ten minutes. It turns the five words above into understood machinery: how git picks midpoints, what <code>run</code> does with exit codes (including the 125 skip), and why “first bad commit” is the precise answer to “which commit broke it.” If the <code>-m 1</code> door looks alien, Pro Git’s “Reverting a Merge” section (in “Undoing Things”) is ten more minutes.</div>
+
+<h2><span class="no">8</span>What’s next</h2>
+
+<p><strong>Lesson 5 — The remote.</strong> “Local-only” versus “shared” — the whole question behind today’s two doors — exists because of <code>origin</code>. Next: <code>push</code>, <code>pull</code>, and the remote as a <em>backup</em>, not a source of truth, for your agent’s work. It’s the last piece of the safety picture; by the end of it, every git operation in your day will have a place in it.</p>
+
+<div class="foot">
+  <p>Quick-reference version of everything on this page: <a href="../reference/0004-history-debugger-cheatsheet.html">the history-debugger cheatsheet</a>. · Earlier: <a href="0003-when-main-moves.html">Lesson 3 — when main moves</a> · <a href="0002-the-agents-sandbox.html">Lesson 2 — the branch sandbox</a> · <a href="0001-checkpoint-and-rollback.html">Lesson 1 — the checkpoint loop</a>. · Part of the <a href="../MISSION.md">Git for Vibe Coding</a> course.</p>
+  <p><strong>Stuck on anything?</strong> I’m your teacher for this course — and the best use of this lesson is real: paste a genuinely broken build (the failure output, plus your <code>git log --oneline</code> if you have one) and we’ll run the gate on it together. That’s how this sticks.</p>
+</div>
+
+<script src="../assets/quiz.js"></script>
+</body>
+</html>

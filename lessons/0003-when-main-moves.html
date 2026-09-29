@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 3 — When main moves underneath you</title>
+<link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+
+<h1><span class="lesson-no">Lesson 3 · Git for Vibe Coding</span>
+When main moves underneath you</h1>
+<p class="lede">Lesson 2’s sandbox had one quiet assumption: <code>main</code> is still where you left it. It isn’t — you merged a branch, you pulled, a week passed. Branches <em>diverge</em>, and when two sides both touched the same lines, git stops and asks you a question. This lesson: what a conflict actually is, the loop for finishing one, the one command that unwinds all of it — and the role your agent plays (interpreter, not resolver).</p>
+
+<details class="warmup">
+<summary>Warm-up (30 seconds, from Lesson 2) — a branch has exactly two exits. Name them, with the command for each.</summary>
+<p><strong>Merged</strong> — <code>git merge --no-ff &lt;name&gt;</code> (then <code>git branch -d</code>) — and <strong>killed</strong> — <code>git branch -D &lt;name&gt;</code>. No third state. That “two exits, no limbo” rule is about to show up again, because it’s the spine of this lesson too.</p>
+</details>
+
+<h2><span class="no">1</span>Main moves. That’s normal, not a failure.</h2>
+
+<p>Three ways <code>main</code> ends up ahead of your branch:</p>
+
+<p>• You merged your last branch into main (Lesson 2’s move) and started the next one from the new main — fine. But if you’d started the new branch <em>before</em> that merge, it now sits behind.</p>
+<p>• You pulled or pushed elsewhere — solo devs diverge too; there’s no “someone else” required.</p>
+<p>• Your branch is old. A branch started three weeks ago doesn’t know about anything that landed on main since.</p>
+
+<p>None of this is a problem <em>until</em> you try to bring the two sides together and both of them edited the same lines differently. That’s the one case git refuses to handle for you.</p>
+
+<h2><span class="no">2</span>Divergence, drawn</h2>
+
+<pre><code>A ── B ── C ─────────── E ─ F     ← main moved: two new commits after the fork
+          │
+          ├─ D ─ G               ← your branch, built on the old C
+
+main and your branch are both ahead of C.
+Neither side is wrong. They just don’t know about each other yet.</code></pre>
+
+<p>Reconciling has two directions, and they cost the same work at different times:</p>
+
+<table>
+  <tr><th>Direction</th><th>Command (on your branch)</th><th>When the conflicts hurt</th></tr>
+  <tr><td>Bring <strong>main into the branch</strong> — <code>git merge main</code></td><td>now, while the branch is small and the work is fresh in your head</td></tr>
+  <tr><td>Bring the <strong>branch into main</strong> — <code>git merge --no-ff &lt;name&gt;</code></td><td>at the end, possibly with weeks of drift packed into one big diff</td></tr>
+</table>
+
+<div class="callout"><strong class="label">The rule</strong>
+Sync early, not late. Same total work, but early conflicts are small and localised; late conflicts are an archaeology dig. When a branch starts feeling stale, <code>git merge main</code> into it — that’s maintenance, not a decision.</div>
+
+<p class="kicker">Note: on a feature branch, <code>git pull</code> pulls the <em>remote</em> of the current branch — not main. The tool for “main moved” is a plain <code>git merge main</code>.</p>
+
+<h2><span class="no">3</span>The conflict: git refusing to guess</h2>
+
+<p>A conflict is not an error. It’s git saying: <em>“both sides changed these lines, in different ways, and I will not guess which intent wins.”</em> It stops the merge, marks the files, and hands you the judgment. The marker:</p>
+
+<pre class="diff"><code><span class="meta">app.js — the conflicted hunk</span>
+&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD
+  const label = "Log in";
+=======
+  const label = "Sign in";
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; main</code></pre>
+
+<p>Top side = <strong>you</strong> (where you were when the merge started). Bottom side = <strong>incoming</strong> (main). For each hunk, exactly three legal moves:</p>
+
+<p>• <strong>Take the top.</strong> Your change was the intended one. <br>
+• <strong>Take the bottom.</strong> Main’s change was the intended one; yours was a stale duplicate of the same idea. <br>
+• <strong>Write a third line</strong> that fuses both intents — the honest move when both changes are real and compatible.</p>
+
+<p>Notice what none of this is: it is not a text problem. “Which side is right” is an <strong>intent</strong> question — what was each change <em>for</em>? That is the only question in all of git that only you can answer, which is why the agent guardrails in section 5 matter most here.</p>
+
+<h2><span class="no">4</span>The conflict loop</h2>
+
+<div class="loop">
+  <div class="step"><div class="num">1</div><div>
+    <h3>Map the damage</h3>
+    <p><code>git status</code> lists every conflicted file (“both modified”). That list is your to-do list — nothing else in the repo is affected.</p>
+  </div></div>
+  <div class="step"><div class="num">2</div><div>
+    <h3>Read each hunk</h3>
+    <p>Open the file, find the <code>&lt;&lt;&lt;&lt;&lt;&lt;&lt;</code> markers. (Section 5: your agent can translate each hunk into plain English first.)</p>
+  </div></div>
+  <div class="step"><div class="num">3</div><div>
+    <h3>Decide, per hunk</h3>
+    <p>Top, bottom, or a fused third line. The call is about intent, and it’s yours.</p>
+  </div></div>
+  <div class="step"><div class="num">4</div><div>
+    <h3>Mark it resolved</h3>
+    <p><code>git add &lt;file&gt;</code> after each file. “Resolved” literally means “staged” — git has no other concept of done.</p>
+  </div></div>
+  <div class="step"><div class="num">5</div><div>
+    <h3>Finish the merge</h3>
+    <p>All files added → <code>git commit</code> (or <code>git merge --continue</code>). The merge commit records that the two sides were reconciled — your decisions are now history.</p>
+  </div></div>
+</div>
+
+<div class="idea"><strong class="label">Two exits, again</strong>
+A merge is either <strong>finished</strong> (add + commit) or <strong>aborted</strong>: <code>git merge --abort</code> — and you are back to <em>exactly</em> the state you were in before you typed the merge. Nothing is lost; it’s as if the merge never happened. There is no third state. A repo left mid-merge overnight is branch limbo with extra steps — always pick an exit, even if the exit is “not today.”</div>
+
+<h2><span class="no">5</span>The agent as conflict interpreter</h2>
+
+<p>Conflicts are the one place in vibe coding where the agent’s default behaviour is actively dangerous. Left unsupervised, an agent “resolving” a conflict usually means: <strong>pick one side wholesale, keep moving</strong>. It has no way to know your intent — it’s pattern-matching on syntax, and syntax can’t tell you whether the rebrand to “Sign in” was the point.</p>
+
+<p>The working division of labour — agent <em>interprets</em>, you <em>judge</em>:</p>
+
+<div class="callout"><strong class="label">The prompt that works</strong>
+<em>“Don’t resolve anything yet. For each conflicted file, show me each hunk in plain English: what does the top side do, what does the bottom side do, and do the two changes conflict in purpose or just in text?”</em><br><br>
+You then make the calls — usually in under a minute per hunk, because the agent did the translation. <strong>Red flag:</strong> the agent “fixed” a conflict by deleting one side wholesale without you reading it. That’s a guess wearing a costume; re-run with the prompt above.</div>
+
+<p class="kicker">Conflicts are the rare moment to deliberately slow down in an agent session. Everything else in this course is about moving faster with less fear; a conflict is where the fear is <em>earned</em> — it’s the one decision git insists on making human.</p>
+
+<h2><span class="no">6</span>Check yourself</h2>
+
+<p>Four scenarios. Options shuffle each load — click for instant feedback.</p>
+
+<div class="quiz" data-quiz>
+  <p class="quiz-q"><strong>Q1.</strong> You run <code>git pull</code> on <code>main</code> and it ends with a conflict. What state is the repo in?</p>
+  <div class="quiz-opts">
+    <button class="quiz-opt" data-correct="true" data-expl="Git stopped mid-merge and is waiting for your decision. Everything is intact — files just carry markers — and git merge --abort returns you to exactly the pre-pull state. A question, not a disaster.">Mid-merge, git is waiting for you</button>
+    <button class="quiz-opt" data-expl="The scary story, and a false one. Corruption is what git is designed to prevent; a conflict means it paused safely instead of guessing. No re-clone needed — ever, for this.">main is corrupted, you must re-clone</button>
+    <button class="quiz-opt" data-expl="A conflict means the pull did NOT finish — the merge is mid-flight. Running on to other work on top of a half-merge is exactly the limbo this lesson forbids.">Pull fully succeeded, nothing to do</button>
+    <button class="quiz-opt" data-expl="A conflicting pull deletes nothing — both sides are sitting in the file, marked. Starting over would throw away work you could have resolved in a minute.">The branch was deleted, start over</button>
+  </div>
+  <p class="quiz-fb" hidden></p>
+</div>
+
+<div class="quiz" data-quiz>
+  <p class="quiz-q"><strong>Q2.</strong> You’re on your feature branch. Meanwhile <code>main</code> got two new commits (you merged another branch earlier). You want main’s changes <em>in this branch</em>, now. What do you type?</p>
+  <div class="quiz-opts">
+    <button class="quiz-opt" data-correct="true" data-expl="Standing on the branch, merge main into it — that is the sync. Any conflicts surface now, while the branch is small and the work is fresh. Early is cheap; late is an archaeology dig.">git merge main</button>
+    <button class="quiz-opt" data-expl="Tempting, and a classic trap: pull’s default target is the REMOTE of the current branch, and git reads “main” here as a remote name. Pull is for remotes; merge is for local branches.">git pull main</button>
+    <button class="quiz-opt" data-expl="That just moves you to main — your branch stays diverged, and now you’re editing on the safe line. Rule 1 from Lesson 2.">git checkout main</button>
+    <button class="quiz-opt" data-expl="Push uploads to the remote; it never brings anything in. And pushing an unsynced main is how shared messes get born.">git push main</button>
+  </div>
+  <p class="quiz-fb" hidden></p>
+</div>
+
+<div class="quiz" data-quiz>
+  <p class="quiz-q"><strong>Q3.</strong> Conflict in <code>copy.js</code>: your branch has <code>"Log in"</code>, main has <code>"Sign in"</code>. Main changed that line two weeks ago (a rebrand). You never intended to change that line. What do you keep?</p>
+  <div class="quiz-opts">
+    <button class="quiz-opt" data-correct="true" data-expl="Intent check: the rebrand was deliberate and newer; your “Log in” is just the old text you had at the fork. Bottom side wins — that’s the take-the-bottom move, the most common one in practice.">Keep main's Sign in, drop yours</button>
+    <button class="quiz-opt" data-expl="That silently reverts a deliberate two-weeks-old rebrand for the whole project. The intent was main’s — you had no claim on that line at the fork.">Keep your Log in, drop main's</button>
+    <button class="quiz-opt" data-expl="Both strings on one line is a third legal move, but only when both intents are real and compatible. Here one intent is stale — keeping both ships nonsense.">Keep both lines, ship the mess</button>
+    <button class="quiz-opt" data-expl="The agent should translate each side into plain English — but the final call is about intent, and only you know which change was for what. Interpreting: yes. Choosing: no.">Have the agent choose the side</button>
+  </div>
+  <p class="quiz-fb" hidden></p>
+</div>
+
+<div class="quiz" data-quiz>
+  <p class="quiz-q"><strong>Q4.</strong> You’ve edited every conflicted file and saved. The merge still isn’t finished — <code>git status</code> still says “fix conflicts.” What completes the merge?</p>
+  <div class="quiz-opts">
+    <button class="quiz-opt" data-correct="true" data-expl="“Resolved” literally means “staged.” git add each file you fixed, then git commit (or git merge --continue) — the merge commit records the reconciliation and the merge is done. Exit one of the two.">git add the files, then commit</button>
+    <button class="quiz-opt" data-expl="A pull mid-merge is a second merge on top of an unfinished one — new conflicts, deeper confusion. The merge you’re in is waiting for an exit, not for more input.">git pull again to fix it</button>
+    <button class="quiz-opt" data-expl="Nuclear exit. It would escape, but it incinerates the resolutions you just wrote — and the purpose-built tool for “undo a merge” is git merge --abort, which is calm and exact.">git reset --hard to start clean</button>
+    <button class="quiz-opt" data-expl="You can’t delete the branch you’re standing on — and abandoning the work is a Lesson-2 move. Mid-merge, the only two exits are finish (add + commit) or abort.">git branch -D to abandon work</button>
+  </div>
+  <p class="quiz-fb" hidden></p>
+</div>
+
+<p class="kicker">3 or 4 correct and you can stand in a conflict without fear. Q1 or Q4 shaky? Those are the two states everyone panics in — tell me which, and we’ll drill it.</p>
+
+<h2><span class="no">7</span>Practice — do this now</h2>
+
+<p>Ten minutes, no agent needed — this lesson is about <em>you</em> making the call. You manufacture the divergence by hand:</p>
+
+<pre><code>mkdir vibe-diverge &amp;&amp; cd vibe-diverge &amp;&amp; git init
+# app.js containing one line:   const label = "Log in";
+git add -A &amp;&amp; git commit -m "working app"
+
+# fork the branch, do UNRELATED work on it
+git switch -c fix-copy
+# change the button colour in app.js (any unrelated line)
+git add -A &amp;&amp; git commit -m "button colour"
+
+# meanwhile, main moves — edit the SAME label line
+git switch main
+# edit app.js:   const label = "Sign in";
+git add -A &amp;&amp; git commit -m "rebrand button text"
+
+# now bring main into the branch → conflict
+git switch fix-copy
+git merge main          # ← BOOM: "merge conflict" in app.js
+git status              # the map: which files are conflicted
+# open app.js, find &lt;&lt;&lt;&lt;&lt;&lt;&lt; — keep main's "Sign in" (the rebrand was the intent)
+git add app.js
+git commit              # merge finished. Two exits; you took one.
+git log --oneline --graph   # ← the hump where the two sides met</code></pre>
+
+<div class="idea"><strong class="label">Or practice with me</strong>
+Tell me: <em>“make a mess in a scratch repo”</em> — I’ll set up the divergence, have the agent edit the same lines on both branches so the conflict is real, then run the interpreter prompt for one hunk as a demo. You make the calls and drive the loop; I watch every command.</div>
+
+<div class="primary"><strong class="label">Primary source — read today</strong>
+<strong>Pro Git, “Merging”</strong> (the resolving-conflicts sections) — <a href="https://git-scm.com/book/en/v2/Git-Branching-Merging">git-scm.com/book</a>. Ten minutes. It turns the markers above from scary sigils into machinery: you’ll see exactly why git can auto-merge most hunks, why “both modified” is a precise state, and where <code>--abort</code> fits in the sequence.</div>
+
+<h2><span class="no">8</span>What’s next</h2>
+
+<p><strong>Lesson 4 — History is your debugger.</strong> The app broke, but <em>which</em> agent commit did it? <code>git log</code> as a timeline, diffing against any past checkpoint, <code>git revert</code> for work that’s already shared, and the agent-era superpower: <code>git bisect</code>, where the binary search finds the guilty commit while you just answer “works / broken.”</p>
+
+<div class="foot">
+  <p>Quick-reference version of everything on this page: <a href="../reference/0003-divergence-and-conflicts-cheatsheet.html">the divergence &amp; conflicts cheatsheet</a>. · Earlier: <a href="0002-the-agents-sandbox.html">Lesson 2 — the branch sandbox</a> · <a href="0001-checkpoint-and-rollback.html">Lesson 1 — the checkpoint loop</a>. · Part of the <a href="../MISSION.md">Git for Vibe Coding</a> course.</p>
+  <p><strong>Stuck on anything?</strong> I’m your teacher for this course — paste a conflict you’ve hit in a real project and we’ll resolve it together with the loop. That’s the fastest way to make this stick.</p>
+</div>
+
+<script src="../assets/quiz.js"></script>
+</body>
+</html>
